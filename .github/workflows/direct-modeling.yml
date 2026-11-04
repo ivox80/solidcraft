@@ -1,0 +1,20 @@
+name: Direct Modeling Rust
+on:
+  push:
+    paths:
+      - 'direct-modeling/**'
+      - '.github/workflows/direct-modeling.yml'
+  pull_request:
+    paths:
+      - 'direct-modeling/**'
+      - '.github/workflows/direct-modeling.yml'
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Run native unit tests
+        run: cargo test --manifest-path direct-modeling/Cargo.toml
+      - name: Check WASM feature compiles for native target
+        run: cargo check --manifest-path direct-modeling/Cargo.toml --features wasm
