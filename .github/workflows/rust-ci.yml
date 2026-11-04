@@ -1,0 +1,54 @@
+name: SolidCraft Rust CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  textillab:
+    name: TextilLab / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    defaults:
+      run:
+        working-directory: textillab
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: textillab
+      - name: Formatting
+        run: cargo fmt --all -- --check
+      - name: Lint
+        run: cargo clippy --all-targets --all-features -- -D warnings
+      - name: Unit tests
+        run: cargo test --all-targets --all-features --verbose
+      - name: Release build
+        run: cargo build --release --all-targets
+      - name: CLI smoke test
+        run: cargo run --release --bin textillab-demo -- smoke-exports
+      - name: Verify exports
+        shell: bash
+        run: |
+          test -s smoke-exports/pattern.svg
+          test -s smoke-exports/pattern.obj
+      - name: Upload exports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: textillab-exports-${{ matrix.os }}
+          path: textillab/smoke-exports/
+          if-no-files-found: ignore
