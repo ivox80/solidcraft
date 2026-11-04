@@ -92,7 +92,10 @@ impl Pattern {
             || !self.seam_allowance_mm.is_finite()
             || self.seam_allowance_mm < 0.0
             || self.outline.len() < 3
-            || !self.outline.iter().all(|p| p.x.is_finite() && p.y.is_finite())
+            || !self
+                .outline
+                .iter()
+                .all(|p| p.x.is_finite() && p.y.is_finite())
         {
             return Err("Invalid pattern".into());
         }
@@ -196,8 +199,7 @@ impl Pattern {
             )
             .map_err(|e| e.to_string())?;
             for point in points {
-                write!(output, "{:.3},{:.3} ", point.x, point.y)
-                    .map_err(|e| e.to_string())?;
+                write!(output, "{:.3},{:.3} ", point.x, point.y).map_err(|e| e.to_string())?;
             }
             output.push_str("\"/>\n");
         }
@@ -209,8 +211,7 @@ impl Pattern {
         self.validate()?;
         let mut output = String::from("# Flat fabric mesh, units: mm\n");
         for point in &self.outline {
-            writeln!(output, "v {:.6} {:.6} 0.0", point.x, point.y)
-                .map_err(|e| e.to_string())?;
+            writeln!(output, "v {:.6} {:.6} 0.0", point.x, point.y).map_err(|e| e.to_string())?;
         }
         for i in 2..self.outline.len() {
             writeln!(output, "f 1 {} {}", i, i + 1).map_err(|e| e.to_string())?;
@@ -264,14 +265,9 @@ mod tests {
 
     #[test]
     fn invalid_dimensions_rejected() {
-        assert!(Pattern::rectangle(
-            "Panel",
-            -1.0,
-            100.0,
-            5.0,
-            Material::nylon_420d_example()
-        )
-        .is_err());
+        assert!(
+            Pattern::rectangle("Panel", -1.0, 100.0, 5.0, Material::nylon_420d_example()).is_err()
+        );
     }
 
     #[test]
