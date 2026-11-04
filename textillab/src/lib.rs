@@ -279,3 +279,6 @@ mod tests {
         assert!(pattern.obj().unwrap().contains("f 1 2 3"));
     }
 }
+
+/// Developable triangular surface unfolding with explicit cut edges.
+pub mod unfold;
