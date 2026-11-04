@@ -1,0 +1,17 @@
+[package]
+name = "solidcraft-direct-modeling"
+version = "0.1.0"
+edition = "2021"
+description = "Experimental axis-aligned direct modeling core for SolidCraft"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = []
+wasm = ["dep:wasm-bindgen", "dep:serde", "dep:serde-wasm-bindgen"]
+
+[dependencies]
+wasm-bindgen = { version = "0.2", optional = true }
+serde = { version = "1", features = ["derive"], optional = true }
+serde-wasm-bindgen = { version = "0.6", optional = true }
