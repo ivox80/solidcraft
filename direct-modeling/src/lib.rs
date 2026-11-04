@@ -90,6 +90,18 @@ pub fn subtract_many_wasm(targets: JsValue, cutters: JsValue) -> Result<JsValue,
         .map_err(|e| JsValue::from_str(&e.to_string()))
 }
 
+
+/// Move a planar face of one box in the browser.
+#[cfg(feature = "wasm")]
+#[wasm_bindgen]
+pub fn move_face_wasm(value: JsValue, axis: usize, positive: bool, delta: f64) -> Result<JsValue, JsValue> {
+    let mut b: Box3 = serde_wasm_bindgen::from_value(value)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    b = Box3::new(b.min, b.max).map_err(JsValue::from_str)?;
+    b.move_face(axis, positive, delta).map_err(JsValue::from_str)?;
+    serde_wasm_bindgen::to_value(&b).map_err(|e| JsValue::from_str(&e.to_string()))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
