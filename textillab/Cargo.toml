@@ -1,0 +1,14 @@
+[package]
+name = "solidcraft-textillab-prototype"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Standalone textile pattern engine prototype for future SolidCraft integration"
+
+[lib]
+name = "textillab"
+path = "src/lib.rs"
+
+[[bin]]
+name = "textillab-demo"
+path = "src/main.rs"
