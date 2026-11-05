@@ -123,10 +123,7 @@ pub fn parse_seam(specification: &str, mesh: &TriangleMesh) -> Result<(usize, us
         return Err("Seam endpoints must be different".into());
     }
     let edge = (a.min(b), a.max(b));
-    if !mesh_edges(mesh)
-        .iter()
-        .any(|e| (e.a, e.b) == edge)
-    {
+    if !mesh_edges(mesh).iter().any(|e| (e.a, e.b) == edge) {
         return Err(format!("Seam {}:{} is not a mesh edge", a + 1, b + 1));
     }
     Ok(edge)
