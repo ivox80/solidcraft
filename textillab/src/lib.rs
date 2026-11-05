@@ -282,3 +282,6 @@ mod tests {
 
 /// Developable triangular surface unfolding with explicit cut edges.
 pub mod unfold;
+
+/// Wavefront OBJ mesh loading and edge selection utilities.
+pub mod obj_import;
