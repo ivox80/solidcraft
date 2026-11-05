@@ -1,0 +1,27 @@
+name: Skeleton AI Rust CI
+on:
+  push:
+    paths:
+      - 'modules/skeleton_ai/**'
+      - '.github/workflows/skeleton-ai-rust.yml'
+  pull_request:
+    paths:
+      - 'modules/skeleton_ai/**'
+      - '.github/workflows/skeleton-ai-rust.yml'
+jobs:
+  rust-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt,clippy
+      - name: Check
+        working-directory: modules/skeleton_ai
+        run: cargo check --all-targets
+      - name: Unit tests
+        working-directory: modules/skeleton_ai
+        run: cargo test
+      - name: Generate sample model
+        working-directory: modules/skeleton_ai
+        run: cargo run --release -- --input examples/two_sided_profiles.json --output two_sided.stl --resolution 36
