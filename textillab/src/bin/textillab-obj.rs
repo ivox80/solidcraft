@@ -35,7 +35,8 @@ fn main() -> Result<(), String> {
                     .get(i)
                     .ok_or_else(|| format!("{option} requires a value"))?;
                 if option == "--seam" {
-                    mesh.seams.insert(parse_seam(value, &mesh)?);
+                    let seam = parse_seam(value, &mesh)?;
+                    mesh.seams.insert(seam);
                 } else {
                     output = value.clone();
                 }
