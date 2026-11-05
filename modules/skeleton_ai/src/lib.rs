@@ -190,12 +190,26 @@ impl EdgeStations {
     }
 }
 
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum ActiveValue { Bool(bool), Int(i64) }
+fn deserialize_active<'de, D>(deserializer: D) -> Result<Vec<bool>, D::Error>
+where D: serde::Deserializer<'de> {
+    let values = Vec::<ActiveValue>::deserialize(deserializer)?;
+    values.into_iter().map(|v| match v {
+        ActiveValue::Bool(x) => Ok(x),
+        ActiveValue::Int(0) => Ok(false),
+        ActiveValue::Int(1) => Ok(true),
+        _ => Err(serde::de::Error::custom("active entries must be booleans or 0/1")),
+    }).collect()
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SkeletonDocument {
     pub nodes: Vec<[f64;3]>,
     pub edges: Vec<[usize;2]>,
     pub areas: Vec<f64>,
-    #[serde(default)] pub active: Vec<bool>,
+    #[serde(default, deserialize_with = "deserialize_active")] pub active: Vec<bool>,
     #[serde(default)] pub section_stations: HashMap<String,EdgeStations>,
     #[serde(default)] pub cross_section: Option<DefaultSection>,
 }
@@ -366,7 +380,7 @@ pub fn generate_mesh(s:&Skeleton,resolution:usize,max_cells:usize)->Result<Mesh,
                 let id=mesh.vertices.len() as u32;
                 mesh.vertices.push(v.arr());vertices.insert(key,id);id
             };
-            let mut triangle=|a:u32,b:u32,c:u32,mesh:&mut Mesh| {
+            let triangle=|a:u32,b:u32,c:u32,mesh:&mut Mesh| {
                 let pa=V3::from_array(mesh.vertices[a as usize]);
                 let pb=V3::from_array(mesh.vertices[b as usize]);
                 let pc=V3::from_array(mesh.vertices[c as usize]);
