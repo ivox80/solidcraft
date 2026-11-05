@@ -76,6 +76,11 @@ mod tests{
         let x=force_features([0.0,100.0,80.0,0.0,12.0,0.0],1.5,0.018).unwrap();
         let scores=net.predict(&x);
         assert!(scores.iter().all(|s|s.is_finite()));
+        // Golden values from the original Python V0.4 NumPy model.
+        let python_scores=[-0.055535323634,-0.075372069905,0.362269519104,
+            -0.077786938120,0.400474495869,-0.041986493922,
+            -0.075672564477,-0.438387508161];
+        for i in 0..8 {assert!((scores[i]-python_scores[i]).abs()<1e-8);}
         assert_eq!(net.rank(&x).len(),8);
         assert!((x[27]-1.5_f64.ln()).abs()<1e-12);
     }
