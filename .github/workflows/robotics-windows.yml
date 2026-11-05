@@ -1,0 +1,53 @@
+name: Build SolidCraft Robotics (Windows)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [feature/robotics-native-ui]
+    paths:
+      - 'robotics/**'
+      - '.github/workflows/robotics-windows.yml'
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout user toolbox
+        uses: actions/checkout@v4
+        with:
+          path: toolbox
+      - name: Checkout upstream SolidCraft at fixed revision
+        uses: actions/checkout@v4
+        with:
+          repository: tangency-labs/solidcraft
+          ref: 6029a38ea05da8f37517da6b06624a8bec18adf5
+          path: solidcraft-upstream
+          submodules: recursive
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: solidcraft-upstream
+      - name: Apply native Rust UI patch
+        shell: pwsh
+        run: py toolbox/robotics/apply_to_upstream.py solidcraft-upstream
+      - name: Test robotics UI unit tests
+        working-directory: solidcraft-upstream
+        run: cargo test -p solidcraft-ui-egui --lib robotics_toolbox
+      - name: Build SolidCraft Windows executable
+        working-directory: solidcraft-upstream
+        run: cargo build --release -p solidcraft
+      - name: Collect executable
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path output | Out-Null
+          Copy-Item solidcraft-upstream/target/release/solidcraft.exe output/SolidCraft-Robotics.exe
+          Copy-Item toolbox/robotics/README.md output/README.md
+      - name: Upload Windows executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: SolidCraft-Robotics-Windows
+          path: output/
+          if-no-files-found: error
