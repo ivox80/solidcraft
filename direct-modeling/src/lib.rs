@@ -153,3 +153,5 @@ mod tests {
 }
 
 pub mod poly;
+
+pub mod nurbs;
