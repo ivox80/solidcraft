@@ -285,3 +285,6 @@ pub mod unfold;
 
 /// Wavefront OBJ mesh loading and edge selection utilities.
 pub mod obj_import;
+
+/// TextilLab Studio panel boundary and SVG preview generation.
+pub mod studio_patterns;
