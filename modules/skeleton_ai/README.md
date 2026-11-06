@@ -77,3 +77,11 @@ Weights are exported from the V0.4 trained `.npz` file without retraining. AI in
 - The SDF uses a discrete voxel grid and marching tetrahedra, not precise NURBS/B-Rep/STEP.
 - Mechanical stiffness is **not** recomputed from the actual exported mesh. Recheck local stress, buckling and geometry with independent FEM before manufacture.
 - Rust compilation must be run on a machine with `cargo`; the artifact environment used to prepare this crate did not include a Rust compiler.
+
+## Interaktiver Editor (V0.6, lokal)
+
+```bash
+cargo run --release --bin skeleton-editor -- --input examples/two_sided_profiles.json
+```
+
+Im Browser `http://127.0.0.1:8765` öffnen. Knoten direkt im 3D-Fenster ziehen, End- und Zwischenquerschnitte unabhängig bearbeiten, JSON speichern und OBJ/STL erzeugen. Die Anbindung an die vollständige SolidCraft-Host-GUI ist noch offen. Details: [EDITOR_ANLEITUNG_DE.md](EDITOR_ANLEITUNG_DE.md).
