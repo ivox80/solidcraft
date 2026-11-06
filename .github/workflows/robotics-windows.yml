@@ -39,6 +39,15 @@ jobs:
       - name: Build SolidCraft Windows executable
         working-directory: solidcraft-upstream
         run: cargo build --release -p solidcraft
+      - name: Build CLI for native CAD sample
+        working-directory: solidcraft-upstream
+        run: cargo build --release -p solidcraft-cli
+      - name: Generate native robot arm design
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path output | Out-Null
+          & solidcraft-upstream/target/release/solidcraft-cli.exe run toolbox/robotics/examples/robot_arm_two_axes.json --out output/robot_arm_two_axes.sc
+          if (-not (Test-Path output/robot_arm_two_axes.sc)) { throw "Sample design not created" }
       - name: Collect executable
         shell: pwsh
         run: |
