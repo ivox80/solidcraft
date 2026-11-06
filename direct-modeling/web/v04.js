@@ -3,7 +3,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import init, {
   nurbs_panel_wasm, nurbs_cylinder_wasm, nurbs_evaluate_wasm,
-  nurbs_tessellate_wasm, nurbs_edit_control_wasm,
+  nurbs_tessellate_wasm, nurbs_edit_control_wasm, nurbs_patch_topology_wasm,
 } from '../pkg/solidcraft_direct_modeling.js';
 
 // All surface evaluation, control editing and tessellation happen inside Rust/WASM.
@@ -14,7 +14,7 @@ const log = message => { $('log').textContent = message; };
 const colors = [0x3faad5, 0x78c5a6, 0xd0a2e6, 0xe6b16c, 0x9cbbef];
 let patches = [], active = 0, controlU = 1, controlV = 1;
 let preset = 'panel', ready = false, history = [], surfaceMeshes = [], controlMarkers = [];
-let surfaceTriangles = 0, surfaceArea = 0;
+let surfaceTriangles = 0, surfaceArea = 0, topologyReport = null;
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x101720);
@@ -111,6 +111,12 @@ function refreshInputs() {
   } else {
     $('info').textContent = 'Keine Fläche vorhanden.';
   }
+  $('topology').textContent = topologyReport
+    ? ('Patch-Flächen: ' + topologyReport.face_count + '\nVerbunde Nahtkanten: ' + topologyReport.seam_count +
+       '\nOffene Ränder: ' + topologyReport.open_boundary_count +
+       '\nNichtmanifold-Gruppen: ' + topologyReport.nonmanifold_edge_groups +
+       '\nGetrennte Komponenten: ' + topologyReport.connected_components)
+    : 'Keine Nahtanalyse verfügbar.';
   $('metrics').textContent = 'Render-Dreiecke: ' + surfaceTriangles.toLocaleString('de-DE') +
     '\nTessellierte Fläche (ca.): ' + surfaceArea.toFixed(1) + ' mm²';
   $('undo').disabled = !ready || history.length === 0;
@@ -200,6 +206,32 @@ function redraw() {
       }
     }
   }
+  // The seam analyzer detects sampled G0 adjacency, not closed CAD solids.
+  try {
+    topologyReport = nurbs_patch_topology_wasm(patches.map(p => p.surface), 1e-6);
+    if ($('edges').checked) {
+      for (const open of topologyReport.open_boundaries) {
+        const surface = patches[open.face].surface;
+        const ud = [surface.knots_u[surface.degree_u],
+          surface.knots_u[surface.control_points.length]];
+        const vd = [surface.knots_v[surface.degree_v],
+          surface.knots_v[surface.control_points[0].length]];
+        const pts = [];
+        for (let i = 0; i <= 20; i++) {
+          const t = i / 20;
+          const u = open.edge === 'u_min' ? ud[0] :
+            open.edge === 'u_max' ? ud[1] : ud[0] + (ud[1] - ud[0]) * t;
+          const v = open.edge === 'v_min' ? vd[0] :
+            open.edge === 'v_max' ? vd[1] : vd[0] + (vd[1] - vd[0]) * t;
+          pts.push(nurbs_evaluate_wasm(surface, u, v));
+        }
+        addLine(pts, 0xff996e, 0.98);
+      }
+    }
+  } catch (e) {
+    topologyReport = null;
+    log('Nahtanalyse fehlgeschlagen: ' + e);
+  }
   const activeMarker = controlMarkers.find(marker =>
     marker.userData.patch === active &&
     marker.userData.u === controlU && marker.userData.v === controlV);
@@ -256,6 +288,7 @@ $('patch').onchange = () => {
 $('iu').onchange = () => selectControl(active, Number($('iu').value), controlV);
 $('iv').onchange = () => selectControl(active, controlU, Number($('iv').value));
 $('lattice').onchange = redraw;
+$('edges').onchange = redraw;
 $('resolution').oninput = () => {
   $('resolutionValue').textContent = $('resolution').value + ' × ' + $('resolution').value;
   redraw();
