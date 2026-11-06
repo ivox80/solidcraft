@@ -114,7 +114,7 @@ pub fn make_cut_preview(
         return Err("Flächengewicht muss zwischen 1 und 5000 g/m² liegen".into());
     }
     let unfolded = mesh.unfold()?;
-    let mut shapes = Vec::new();
+    let mut shapes = String::new();
     let mut sewn_area_mm2 = 0.0;
     let mut cut_area_mm2 = 0.0;
     let mut cursor = 10.0;
