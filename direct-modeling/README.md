@@ -10,7 +10,8 @@
 - Editable XYZ control points and rational weights with a native Rust evaluator
 - Adjustable display tessellation (normals via finite differences)
 - Browser surface lab with 3D selectable control vertices, translate gizmo, input fields, undo, JSON and a surface probe
-- Surface geometry is **not yet connected** to convex solid Booleans; no NURBS trimming, sewing, edge healing or fillets
+- Sampled G0 patch-edge matching reports paired seams, open boundaries and disconnected components
+- Surface geometry is **not yet connected** to convex solid Booleans; no NURBS trimming, exact sewing, edge healing or fillets
 
 Open `web/v04.html` after a successful WASM build.
 
