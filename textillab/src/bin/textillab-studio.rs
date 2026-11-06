@@ -52,9 +52,7 @@ fn parse_form(body: &str) -> Result<BTreeMap<String, String>, String> {
         if pair.is_empty() {
             continue;
         }
-        let (key, value) = pair
-            .split_once('=')
-            .ok_or("Malformed form parameter")?;
+        let (key, value) = pair.split_once('=').ok_or("Malformed form parameter")?;
         form.insert(percent_decode(key)?, percent_decode(value)?);
     }
     Ok(form)
@@ -124,8 +122,8 @@ fn read_request(stream: &mut TcpStream) -> Result<(String, String, String), Stri
             return Err("HTTP headers too large".into());
         }
     };
-    let header = String::from_utf8(buf[..header_end].to_vec())
-        .map_err(|_| "Invalid request headers")?;
+    let header =
+        String::from_utf8(buf[..header_end].to_vec()).map_err(|_| "Invalid request headers")?;
     let first = header.lines().next().ok_or("Request line missing")?;
     let mut parts = first.split_whitespace();
     let method = parts.next().ok_or("Method missing")?.to_owned();
@@ -140,10 +138,7 @@ fn read_request(stream: &mut TcpStream) -> Result<(String, String, String), Stri
         if let Some((k, v)) = line.split_once(':') {
             match k.trim().to_ascii_lowercase().as_str() {
                 "content-length" => {
-                    content_length = v
-                        .trim()
-                        .parse()
-                        .map_err(|_| "Invalid Content-Length")?;
+                    content_length = v.trim().parse().map_err(|_| "Invalid Content-Length")?;
                 }
                 "origin" => origin = Some(v.trim().to_string()),
                 "host" => host = Some(v.trim().to_string()),
@@ -172,8 +167,8 @@ fn read_request(stream: &mut TcpStream) -> Result<(String, String, String), Stri
         let remaining = target_len - buf.len();
         buf.extend_from_slice(&chunk[..n.min(remaining)]);
     }
-    let body = String::from_utf8(buf[header_end..].to_vec())
-        .map_err(|_| "Invalid UTF-8 request body")?;
+    let body =
+        String::from_utf8(buf[header_end..].to_vec()).map_err(|_| "Invalid UTF-8 request body")?;
     Ok((method, path, body))
 }
 
@@ -182,13 +177,33 @@ fn serve(mut stream: TcpStream) {
     let result = read_request(&mut stream);
     let response_bytes = match result {
         Ok((method, path, body)) => match (method.as_str(), path.as_str()) {
-            ("GET", "/") => response("200 OK", "text/html; charset=utf-8", include_str!("../../studio/index.html")),
-            ("GET", "/app.js") => response("200 OK", "text/javascript; charset=utf-8", include_str!("../../studio/app.js")),
-            ("GET", "/style.css") => response("200 OK", "text/css; charset=utf-8", include_str!("../../studio/style.css")),
-            ("GET", "/example.obj") => response("200 OK", "text/plain; charset=utf-8", include_str!("../../examples/bent-panel.obj")),
+            ("GET", "/") => response(
+                "200 OK",
+                "text/html; charset=utf-8",
+                include_str!("../../studio/index.html"),
+            ),
+            ("GET", "/app.js") => response(
+                "200 OK",
+                "text/javascript; charset=utf-8",
+                include_str!("../../studio/app.js"),
+            ),
+            ("GET", "/style.css") => response(
+                "200 OK",
+                "text/css; charset=utf-8",
+                include_str!("../../studio/style.css"),
+            ),
+            ("GET", "/example.obj") => response(
+                "200 OK",
+                "text/plain; charset=utf-8",
+                include_str!("../../examples/bent-panel.obj"),
+            ),
             ("POST", "/api/unfold") => match generate_from_form(&body) {
                 Ok(svg) => response("200 OK", "image/svg+xml; charset=utf-8", &svg),
-                Err(error) => response("422 Unprocessable Content", "text/plain; charset=utf-8", &error),
+                Err(error) => response(
+                    "422 Unprocessable Content",
+                    "text/plain; charset=utf-8",
+                    &error,
+                ),
             },
             _ => response("404 Not Found", "text/plain; charset=utf-8", "Not found"),
         },
@@ -236,6 +251,8 @@ mod tests {
     #[test]
     fn reject_invalid_inputs() {
         assert!(generate_from_form("obj=invalid").is_err());
-        assert!(generate_from_form("obj=v+0+0+0%0Av+1+0+0%0Av+0+1+0%0Af+1+2+3&density=-10").is_err());
+        assert!(
+            generate_from_form("obj=v+0+0+0%0Av+1+0+0%0Av+0+1+0%0Af+1+2+3&density=-10").is_err()
+        );
     }
 }
