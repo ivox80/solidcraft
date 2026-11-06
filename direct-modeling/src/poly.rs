@@ -124,13 +124,16 @@ impl ConvexSolid {
     pub fn offset_face(&self,index:usize,delta:f64)->Result<Self,&'static str>{
         if !delta.is_finite(){return Err("invalid face offset");}
         let mut planes=self.planes()?;
-        let p=planes.get_mut(index).ok_or("face index out of bounds")?;
-        p.d+=delta;
+        let moved_plane={
+            let p=planes.get_mut(index).ok_or("face index out of bounds")?;
+            p.d+=delta;
+            *p
+        };
         let result=Self::from_planes(&planes).ok_or("face offset would collapse solid")?;
         // Reject edits where the selected face disappears entirely.
         if !result.faces.iter().any(|face|{
             let pl=Plane::from_face(face).unwrap();
-            dot(pl.n,p.n)>1.0-EPS*10.0 && (pl.d-p.d).abs()<EPS*100.0
+            dot(pl.n,moved_plane.n)>1.0-EPS*10.0 && (pl.d-moved_plane.d).abs()<EPS*100.0
         }) {return Err("selected face disappeared");}
         result.validate()?;
         Ok(result)
@@ -284,7 +287,7 @@ mod tests {
     #[test]fn rotation_preserves_volume(){
         let r=cube().rotated_z(35.).unwrap();r.validate().unwrap();
         approx(r.volume(),1000.);
-        assert!((r.faces[2][1][0]-r.faces[2][0][0]).abs()>1.);
+        assert!((r.faces[2][3][0]-r.faces[2][0][0]).abs()>1.);
     }
     #[test]fn cylinder_has_expected_polygonal_volume(){
         let s=ConvexSolid::cylinder(0.,0.,4.,0.,10.,24).unwrap();s.validate().unwrap();
