@@ -23,6 +23,7 @@ jobs:
         run: |
           node --check direct-modeling/web/app.js
           node --check direct-modeling/web/v03.js
+          node --check direct-modeling/web/v04.js
       - name: Upload distributable demo
         uses: actions/upload-artifact@v4
         with:
