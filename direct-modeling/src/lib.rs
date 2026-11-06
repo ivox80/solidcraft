@@ -1,5 +1,5 @@
 //! Experimental SolidCraft direct modeling kernel.
-//! Exact for axis-aligned boxes only. Not a general B-Rep or NURBS engine.
+//! Includes axis-aligned boxes (v0.2) and convex polygonal solids (v0.3). Not NURBS.
 
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::*;
@@ -151,3 +151,5 @@ mod tests {
         assert!(Box3::new([0., 0., 0.], [0., 1., 1.]).is_err());
     }
 }
+
+pub mod poly;
