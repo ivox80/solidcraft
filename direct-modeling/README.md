@@ -2,7 +2,19 @@
 
 **Experimental module:** Independent Rust geometry prototype with a browser viewer.
 
-## v0.3 (new)
+## v0.4: rational NURBS surface lab (new)
+
+- Tensor-product rational B-spline surfaces (degree 1–5, clamped knot vectors)
+- Exact parametric point evaluation using rational basis functions
+- Exact quarter-circle NURBS patches composing a cylinder sidewall (not capped)
+- Editable XYZ control points and rational weights with a native Rust evaluator
+- Adjustable display tessellation (normals via finite differences)
+- Browser surface lab with 3D selectable control vertices, translate gizmo, input fields, undo, JSON and a surface probe
+- Surface geometry is **not yet connected** to convex solid Booleans; no NURBS trimming, sewing, edge healing or fillets
+
+Open `web/v04.html` after a successful WASM build.
+
+## v0.3
 
 - Convex polygonal solids (flat, outward-facing planar polygon faces)
 - Rotated rectangular prisms and faceted cylinders (6 to 48 sides)
