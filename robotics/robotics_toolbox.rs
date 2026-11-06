@@ -572,6 +572,54 @@ mod tests {
         assert_eq!(motion_params(&state)["study"], "Robot Motion");
     }
     #[test]
+    fn native_3d_grips_open_for_a_robot_joint() {
+        use crate::scenario::Harness;
+        for kind in ["revolute", "slider"] {
+            let mut h = Harness::new();
+            h.app.home.open = false;
+            for (name, corner, size) in [
+                ("Base", [-5, -5, 0], [10, 10, 5]),
+                ("Arm", [-3, -3, 5], [63, 6, 5]),
+            ] {
+                h.app.run("component.activate", json!({"component": "root"})).unwrap();
+                h.app.run("component.create", json!({"name": name, "grounded": false})).unwrap();
+                h.app.run("solid.box", json!({
+                    "length": size[0], "width": size[1],
+                    "height": size[2], "corner": corner
+                })).unwrap();
+            }
+            h.app.run("component.activate", json!({"component": "root"})).unwrap();
+            h.app.run("occurrence.ground", json!({
+                "occurrence": "Base:1", "grounded": true
+            })).unwrap();
+            let origin = |name: &str| json!({
+                "occurrence": name, "point": [0, 0, 5], "z": [0, 0, 1]
+            });
+            let r = h.app.run("joint.create", json!({
+                "type": kind, "name": "Tool Joint",
+                "a": origin("Base"), "b": origin("Arm"),
+                "flip": true, "angle": 0
+            })).unwrap();
+            assert!(r.get("joint").is_some());
+            let mut state = State::default();
+            state.joint = "Tool Joint".into();
+            activate_3d_handles(&mut h.app, &mut state, true);
+            assert!(!state.open, "3D mode should close the toolbox window");
+            assert!(
+                h.app.viewport.joint_handles.is_some(),
+                "native handles did not start for {kind}: {}", state.output
+            );
+            let arm = h.app.session.doc.find_component("Arm")
+                .and_then(|c| h.app.session.doc.occurrence_of(c))
+                .map(|o| o.id).unwrap();
+            assert_eq!(crate::joint_handles::selected_occurrence(&h.app), Some(arm));
+            h.frames(2);
+            assert!(crate::joint_handles::visible(&h.app));
+            crate::joint_handles::close(&mut h.app);
+        }
+    }
+
+    #[test]
     fn motion_study_builds_a_valid_key() {
         let mut s = State::default(); s.joint = "Shoulder".into();
         assert_eq!(motion_params(&s)["keys"][0]["points"][1], json!([100, 90.0]));
