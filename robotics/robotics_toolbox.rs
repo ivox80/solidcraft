@@ -83,7 +83,9 @@ fn selected_occurrences(selection: &Value) -> Vec<String> {
 /// Use the real CAD selection; 3D face, edge, body and vertex picks retain
 /// their exact occurrence, including repeated components in different placements.
 fn picked_occurrences(app: &SolveApp) -> Vec<String> {
-    let mut ids = Vec::new();
+    let mut ids = selected_occurrences(
+        &serde_json::to_value(&app.session.selection).unwrap_or(Value::Null)
+    );
     for item in &app.session.selection {
         let id = match item {
             Sel::Occurrence { path } => path.last().copied(),
@@ -309,7 +311,7 @@ fn body(app: &mut SolveApp, ui: &mut egui::Ui, s: &mut State) {
                 if ui.button("Istwert").clicked() {
                     if let Ok(reply) = app.run("joint.list", json!({"quiet": true})) {
                         let found = reply.get("joints").and_then(Value::as_array)
-                            .and_then(|arr| arr.iter().find(|j| j["name"].as_str() == Some(&s.joint)));
+                            .and_then(|arr| arr.iter().find(|j| j["name"].as_str() == Some(s.joint.as_str())));
                         if let Some(value) = found.and_then(|j| j["values"][0]["value"].as_f64()) {
                             s.drive = value;
                             s.output = "Istwert des Gelenks übernommen.".into();
@@ -427,7 +429,7 @@ pub fn show(app: &mut SolveApp, ctx: &egui::Context) {
             .default_width(480.0)
             .resizable(true)
             .show(ctx, |ui| { body(app, ui, &mut state); });
-        state.open = open;
+        state.open = state.open && open;
     }
     ctx.data_mut(|d| d.insert_temp(key, state));
 }
