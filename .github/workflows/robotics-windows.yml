@@ -8,6 +8,11 @@ on:
       - 'robotics/**'
       - '.github/workflows/robotics-windows.yml'
 
+# Keep only the newest experimental build; older commits must not occupy Windows runners.
+concurrency:
+  group: robotics-windows-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: windows-latest
