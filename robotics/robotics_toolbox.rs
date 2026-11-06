@@ -3,6 +3,7 @@
 use crate::SolveApp;
 use egui::{self, DragValue, RichText};
 use serde_json::{json, Value};
+use solidcraft_engine::Sel;
 
 const STATE_ID: &str = "sc_robotics_toolbox_03";
 const KINDS: [&str; 5] = ["revolute", "slider", "cylindrical", "rigid", "ball"];
@@ -19,6 +20,9 @@ struct State {
     axis: [f64; 3],
     joint: String,
     drive: f64,
+    drive_min: f64,
+    drive_max: f64,
+    live_drive: bool,
     from: f64,
     to: f64,
     steps: u32,
@@ -38,7 +42,8 @@ impl Default for State {
             open: true, tab: 0, a: String::new(), b: String::new(),
             name: "Robot Joint".into(), joint_kind: 0,
             point: [0.0; 3], axis: [0.0, 0.0, 1.0], joint: String::new(),
-            drive: 0.0, from: 0.0, to: 90.0, steps: 100,
+            drive: 0.0, drive_min: -180.0, drive_max: 180.0,
+            live_drive: false, from: 0.0, to: 90.0, steps: 100,
             study: "Robot Motion".into(), playback_step: 0.0,
             effector: String::new(), tip: [0.0; 3],
             target: [100.0, 0.0, 0.0], joints: Vec::new(),
@@ -74,6 +79,99 @@ fn selected_occurrences(selection: &Value) -> Vec<String> {
         }
     }
     ids
+}
+/// Use the real CAD selection; 3D face, edge, body and vertex picks retain
+/// their exact occurrence, including repeated components in different placements.
+fn picked_occurrences(app: &SolveApp) -> Vec<String> {
+    let mut ids = Vec::new();
+    for item in &app.session.selection {
+        let id = match item {
+            Sel::Occurrence { path } => path.last().copied(),
+            Sel::Body { name } => crate::dialogs_assembly::occurrence_of_body(&app.session, name),
+            Sel::Face { body, .. } | Sel::Edge { body, .. } | Sel::Vertex { body, .. } =>
+                crate::dialogs_assembly::occurrence_of_body(&app.session, body),
+            _ => None,
+        };
+        if let Some(id) = id.filter(|id| *id != 0) {
+            let name = id.to_string();
+            if !ids.contains(&name) { ids.push(name); }
+        }
+    }
+    ids
+}
+fn array3(v: &Value) -> Option<[f64; 3]> {
+    let a = v.as_array()?;
+    if a.len() != 3 { return None; }
+    let xyz = [a[0].as_f64()?, a[1].as_f64()?, a[2].as_f64()?];
+    xyz.iter().all(|x| x.is_finite()).then_some(xyz)
+}
+/// Only use a line as an axis if its length agrees with the end-to-end chord.
+/// Curved CAD edges must be picked using SolidCraft's native Joint dialog.
+fn line_axis(edge: &Value) -> Option<([f64; 3], [f64; 3])> {
+    let a = array3(edge.get("start")?)?;
+    let b = array3(edge.get("end")?)?;
+    let length = edge.get("length")?.as_f64()?;
+    if !length.is_finite() || length < 1e-8 { return None; }
+    let delta = [b[0]-a[0], b[1]-a[1], b[2]-a[2]];
+    let norm = delta.iter().map(|x| x*x).sum::<f64>().sqrt();
+    if norm < length * 0.995 || norm < 1e-8 { return None; }
+    let middle = [(a[0]+b[0])/2.0, (a[1]+b[1])/2.0, (a[2]+b[2])/2.0];
+    Some((middle, [delta[0]/norm, delta[1]/norm, delta[2]/norm]))
+}
+fn pick_geometry(app: &mut SolveApp, s: &mut State) {
+    let Some(selection) = app.session.selection.last().cloned() else {
+        s.output = "Zuerst eine Fläche oder gerade Kante im 3D-Modell auswählen.".into();
+        return;
+    };
+    match selection {
+        Sel::Face { body, index, point } => {
+            match app.run("model.faces", json!({"body": body})) {
+                Ok(result) => {
+                    let face = result.get("faces").and_then(Value::as_array)
+                        .and_then(|faces| faces.iter().find(|f| f["index"].as_u64() == Some(index as u64)));
+                    let Some(face) = face else { s.output = "Fläche nicht gefunden.".into(); return; };
+                    if let Some(cyl) = face.get("cylinder").filter(|v| v.is_object()) {
+                        if let (Some(p), Some(axis)) = (
+                            cyl.get("origin").and_then(array3), cyl.get("axis").and_then(array3)
+                        ) {
+                            s.point = p;
+                            s.axis = axis;
+                            s.output = "Zylinderachse und Achsenpunkt übernommen.".into();
+                            return;
+                        }
+                    }
+                    if let Some(axis) = face.get("plane_normal").and_then(array3) {
+                        s.point = [point.x, point.y, point.z];
+                        s.axis = axis;
+                        s.output = "Flächenpunkt und Flächennormale übernommen.".into();
+                    } else {
+                        s.output = "Keine eindeutige Normale. Grafischen SolidCraft-Gelenkdialog verwenden.".into();
+                    }
+                }
+                Err(e) => s.output = e,
+            }
+        }
+        Sel::Edge { body, index, .. } => {
+            match app.run("model.edges", json!({"body": body})) {
+                Ok(result) => {
+                    let edge = result.get("edges").and_then(Value::as_array)
+                        .and_then(|edges| edges.iter().find(|e| e["index"].as_u64() == Some(index as u64)));
+                    if let Some((point, axis)) = edge.and_then(line_axis) {
+                        s.point = point; s.axis = axis;
+                        s.output = "Gerade Kante als Gelenkachse übernommen.".into();
+                    } else {
+                        s.output = "Kante ist gekrümmt oder mehrdeutig. Grafischen Gelenkdialog verwenden.".into();
+                    }
+                }
+                Err(e) => s.output = e,
+            }
+        }
+        Sel::Vertex { point, .. } => {
+            s.point = [point.x, point.y, point.z];
+            s.output = "Eckpunkt übernommen; Achsrichtung manuell festlegen.".into();
+        }
+        _ => s.output = "Eine Fläche, gerade Kante oder einen Eckpunkt auswählen.".into(),
+    }
 }
 fn refresh(app: &mut SolveApp, s: &mut State) {
     match app.run("component.list", json!({"compact": true})) {
@@ -145,9 +243,12 @@ fn create_joint(app: &mut SolveApp, s: &mut State) {
     if note(s, app.run("joint.create", args)) { refresh(app, s); }
 }
 fn motion_params(s: &State) -> Value {
-    json!({"name": s.study, "steps": s.steps,
+    let mut args = json!({"name": s.study, "steps": s.steps,
         "keys": [{"joint": s.joint, "index": 0,
-            "points": [[0, s.from], [s.steps, s.to]]}]})
+            "points": [[0, s.from], [s.steps, s.to]]}]});
+    // Editing an existing motion study must not create a second one.
+    if s.studies.contains(&s.study) { args["study"] = json!(s.study); }
+    args
 }
 fn tabs(ui: &mut egui::Ui, s: &mut State) {
     ui.horizontal(|ui| {
@@ -166,19 +267,23 @@ fn body(app: &mut SolveApp, ui: &mut egui::Ui, s: &mut State) {
     match s.tab {
         0 => {
             if ui.button("2 ausgewählte Instanzen übernehmen").clicked() {
-                match app.run("document.inspect", json!({"measure": false, "sketches": false})) {
-                    Ok(v) => {
-                        let ids = selected_occurrences(&v["selection"]);
-                        if ids.len() == 2 {
-                            s.a = ids[0].clone(); s.b = ids[1].clone();
-                            s.output = "Auswahl übernommen.".into();
-                        } else {
-                            s.output = "Zwei Instanzen im Browser auswählen; andernfalls Namen manuell eingeben.".into();
-                        }
-                    }
-                    Err(e) => s.output = e,
+                let ids = picked_occurrences(app);
+                if ids.len() == 2 {
+                    s.a = ids[0].clone(); s.b = ids[1].clone();
+                    s.output = "Zwei exakte CAD-Instanzen übernommen.".into();
+                } else {
+                    s.output = "Zwei unterschiedliche Baugruppen oder Körper im Browser/3D wählen. Alternativ Instanzen manuell eingeben.".into();
                 }
             }
+            ui.horizontal_wrapped(|ui| {
+                if ui.button("Achse/Punkt von CAD-Fläche oder Kante").clicked() {
+                    pick_geometry(app, s);
+                }
+                if ui.button("Gelenk grafisch im 3D erstellen").clicked() {
+                    s.open = false;
+                    app.start("joint.create");
+                }
+            });
             occurrence_combo(ui, "robot_a", "Basis A", &mut s.a, &s.occurrences);
             occurrence_combo(ui, "robot_b", "Teil B", &mut s.b, &s.occurrences);
             ui.horizontal(|ui| { ui.label("Gelenkname"); ui.text_edit_singleline(&mut s.name); });
@@ -195,15 +300,50 @@ fn body(app: &mut SolveApp, ui: &mut egui::Ui, s: &mut State) {
         }
         1 => {
             joint_combo(ui, s);
+            let kind = s.joints.iter().find(|(name, _)| name == &s.joint)
+                .map(|(_, kind)| kind.as_str()).unwrap_or("revolute");
+            let unit = if kind == "slider" { "mm" } else { "° / mm" };
             ui.horizontal(|ui| {
-                ui.label("Position (° oder mm)");
+                ui.label(format!("Position ({unit})"));
                 ui.add(DragValue::new(&mut s.drive).speed(1.0));
+                if ui.button("Istwert").clicked() {
+                    if let Ok(reply) = app.run("joint.list", json!({"quiet": true})) {
+                        let found = reply.get("joints").and_then(Value::as_array)
+                            .and_then(|arr| arr.iter().find(|j| j["name"].as_str() == Some(&s.joint)));
+                        if let Some(value) = found.and_then(|j| j["values"][0]["value"].as_f64()) {
+                            s.drive = value;
+                            s.output = "Istwert des Gelenks übernommen.".into();
+                        }
+                    }
+                }
             });
-            if ui.button("Gelenk bewegen").clicked() {
-                let r = app.run("joint.drive", json!({"joint": s.joint, "value": s.drive}));
-                note(s, r);
+            ui.horizontal(|ui| {
+                ui.label("Regelbereich");
+                ui.add(DragValue::new(&mut s.drive_min).speed(1.0));
+                ui.label("bis");
+                ui.add(DragValue::new(&mut s.drive_max).speed(1.0));
+            });
+            ui.checkbox(&mut s.live_drive, "Live-Vorschau beim Bewegen");
+            if s.drive_min < s.drive_max {
+                let changed = ui.add(egui::Slider::new(&mut s.drive, s.drive_min..=s.drive_max).text(unit)).changed();
+                if changed && s.live_drive && !s.joint.is_empty() {
+                    let r = app.run("joint.drive", json!({"joint": s.joint, "value": s.drive}));
+                    note(s, r);
+                }
+            } else {
+                ui.label("Minimum muss kleiner als Maximum sein.");
             }
-            ui.label("Drehgelenk: Grad. Schiebegelenk: Millimeter.");
+            ui.horizontal_wrapped(|ui| {
+                if ui.button("Gelenk bewegen").clicked() {
+                    let r = app.run("joint.drive", json!({"joint": s.joint, "value": s.drive}));
+                    note(s, r);
+                }
+                if ui.button("Original SolidCraft-Antriebsdialog").clicked() {
+                    s.open = false;
+                    app.start("joint.drive");
+                }
+            });
+            ui.label("Live-Vorschau kann viele Undo-Schritte anlegen; bei großen Baugruppen deaktivieren.");
         }
         2 => {
             occurrence_combo(ui, "robot_tool", "Werkzeugteil", &mut s.effector, &s.occurrences);
@@ -245,8 +385,20 @@ fn body(app: &mut SolveApp, ui: &mut egui::Ui, s: &mut State) {
                 }
             });
             if ui.button("Kollisionen im Bewegungsverlauf prüfen").clicked() {
-                let r = app.run("motion.interference", json!({"study": s.study, "samples": 30}));
-                note(s, r);
+                match app.run("motion.interference", json!({"study": s.study, "samples": 30})) {
+                    Ok(report) => {
+                        let truncated = report["truncated"] == true;
+                        let collisions = report["collisions"].as_array().map_or(0, Vec::len);
+                        s.output = if truncated {
+                            format!("Unvollständige Prüfung: {collisions} Kollisionspaare erkannt; Rest nicht geprüft.")
+                        } else if report["clear"] == true {
+                            "Prüfung vollständig: keine Kollision erkannt.".into()
+                        } else {
+                            format!("Prüfung vollständig: {collisions} Kollisionspaare. Details: {}", trim(&report.to_string(), 650))
+                        };
+                    }
+                    Err(e) => s.output = e,
+                }
             }
         }
     }
@@ -287,6 +439,23 @@ mod tests {
         let v = json!([{"type":"body","name":"A"},
             {"type":"occurrence","path":[2,4]},{"type":"occurrence","path":[2,5]}]);
         assert_eq!(selected_occurrences(&v), vec!["4", "5"]);
+    }
+    #[test]
+    fn straight_edge_has_expected_axis() {
+        let edge = json!({"start":[0,0,0], "end":[0,10,0], "length":10.0});
+        assert_eq!(line_axis(&edge), Some(([0.0,5.0,0.0],[0.0,1.0,0.0])));
+    }
+    #[test]
+    fn a_curved_edge_is_not_treated_as_a_linear_axis() {
+        let edge = json!({"start":[0,0,0], "end":[1,0,0], "length":3.14159});
+        assert!(line_axis(&edge).is_none());
+    }
+    #[test]
+    fn existing_study_is_updated_not_duplicated() {
+        let mut state = State::default();
+        state.study = "Robot Motion".into();
+        state.studies.push("Robot Motion".into());
+        assert_eq!(motion_params(&state)["study"], "Robot Motion");
     }
     #[test]
     fn motion_study_builds_a_valid_key() {
