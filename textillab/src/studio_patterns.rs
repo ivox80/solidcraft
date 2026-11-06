@@ -80,10 +80,7 @@ pub fn patch_boundary(mesh: &TriangleMesh, patch: &FlatPatch) -> Result<Vec<Poin
     if vertices.len() != adjacent.len() {
         return Err("Patch has multiple boundary loops or holes".into());
     }
-    let outline: Vec<Point> = vertices
-        .iter()
-        .map(|index| flat[index])
-        .collect();
+    let outline: Vec<Point> = vertices.iter().map(|index| flat[index]).collect();
     if polygon_area(&outline).abs() <= 1e-8 {
         return Err("Degenerate boundary polygon".into());
     }
@@ -136,7 +133,13 @@ pub fn make_cut_preview(
                 },
             }
             .cut_outline()
-            .map_err(|e| format!("Patch {}: {} (for seam allowance use convex patterns)", index + 1, e))?
+            .map_err(|e| {
+                format!(
+                    "Patch {}: {} (for seam allowance use convex patterns)",
+                    index + 1,
+                    e
+                )
+            })?
         };
         let min_x = allowance
             .iter()
@@ -171,11 +174,7 @@ pub fn make_cut_preview(
             min_y - 5.0,
             index + 1
         );
-        let _ = writeln!(
-            shapes,
-            "{}",
-            polygon_svg(&allowance, "#fc9a66", "")
-        );
+        let _ = writeln!(shapes, "{}", polygon_svg(&allowance, "#fc9a66", ""));
         let _ = writeln!(
             shapes,
             "{}",
@@ -209,8 +208,7 @@ mod tests {
     use super::*;
     use crate::obj_import::parse_obj;
 
-    const QUAD: &str =
-        "v 0 0 0\nv 100 0 0\nv 100 60 0\nv 0 60 0\nf 1 2 3 4\n";
+    const QUAD: &str = "v 0 0 0\nv 100 0 0\nv 100 60 0\nv 0 60 0\nf 1 2 3 4\n";
 
     #[test]
     fn rectangle_has_correct_allowance_and_weight() {
