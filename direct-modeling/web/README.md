@@ -8,8 +8,8 @@ Two separate demos share the Rust WebAssembly package.
   JSON project import/export and undo.
 
 - `v04.html`: v0.4 true rational NURBS surface point evaluation, control grid editing,
-  four exact quarter-cylinder surface patches, adjustable display tessellation and
-  numeric/3D gizmo edits. **Surface-only**, no B-Rep/NURBS Booleans yet.
+  four exact quarter-cylinder surface patches, sampled seam/open-boundary analysis,
+  adjustable display tessellation, and numeric/3D gizmo edits. **Surface-only**, no B-Rep/NURBS Booleans yet.
 
 Build and start from `direct-modeling/`:
 
