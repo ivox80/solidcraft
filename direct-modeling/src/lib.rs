@@ -155,3 +155,4 @@ mod tests {
 pub mod poly;
 
 pub mod nurbs;
+pub mod nurbs_shell;
