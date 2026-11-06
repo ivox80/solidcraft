@@ -244,6 +244,65 @@ fn create_joint(app: &mut SolveApp, s: &mut State) {
         "a": side(&s.a), "b": side(&s.b), "flip": true});
     if note(s, app.run("joint.create", args)) { refresh(app, s); }
 }
+/// Activate SolidCraft's own on-canvas joint rings and slide arrows.
+//// The native viewport handles preserve joint limits, loop constraints,
+//// collision stops and a single undo checkpoint across a drag.
+fn activate_3d_handles(app: &mut SolveApp, s: &mut State, prefer_joint: bool) {
+    if !app.preferences.assembly_move_handles {
+        s.output = "3D-Gelenkgriffe sind in SolidCrafts Einstellungen deaktiviert (Assembly Move Handles).".into();
+        return;
+    }
+    if app.session.active_sketch.is_some() {
+        s.output = "Bitte zuerst die aktive Skizze beenden.".into();
+        return;
+    }
+
+    let mut candidates: Vec<u64> = Vec::new();
+    if prefer_joint {
+        if let Some(joint) = app.session.doc.assembly.joints.iter()
+            .find(|j| j.name == s.joint && !j.suppressed)
+        {
+            for id in [joint.b.occurrence, joint.a.occurrence] {
+                if id != 0 && !candidates.contains(&id) { candidates.push(id); }
+            }
+        }
+    }
+    // A viewport/body/browser selection wins when explicitly requested.
+    for id in picked_occurrences(app).iter().filter_map(|name| name.parse::<u64>().ok()) {
+        if !candidates.contains(&id) { candidates.push(id); }
+    }
+    if !prefer_joint {
+        if let Some(joint) = app.session.doc.assembly.joints.iter()
+            .find(|j| j.name == s.joint && !j.suppressed)
+        {
+            for id in [joint.b.occurrence, joint.a.occurrence] {
+                if id != 0 && !candidates.contains(&id) { candidates.push(id); }
+            }
+        }
+    }
+
+    let previous = serde_json::to_value(&app.session.selection).unwrap_or(Value::Null);
+    for id in candidates {
+        // The handles deliberately follow the current selection each frame.
+        // Select the occurrence first, otherwise SolidCraft's native sync closes them.
+        let Some(occ) = app.session.doc.occurrences.iter().find(|o| o.id == id) else { continue; };
+        let mut path = app.session.doc.first_path(occ.parent);
+        path.push(id);
+        if app.run("select.set", json!({"items": [{"type": "occurrence", "path": path}]})).is_err() {
+            continue;
+        }
+        if crate::joint_handles::begin(app, id) {
+            s.output = "3D-Manipulator aktiviert. Drehringe/Pfeile direkt am Modell ziehen; Esc beendet den Modus.".into();
+            s.open = false;
+            return;
+        }
+    }
+    if let Some(items) = previous.as_array() {
+        let _ = app.run("select.set", json!({"items": items}));
+    }
+    s.output = "Kein frei bewegliches Gelenk an diesem Bauteil. Gelenktyp, Fixierung oder Zwangsbedingungen prüfen.".into();
+}
+
 fn motion_params(s: &State) -> Value {
     let mut args = json!({"name": s.study, "steps": s.steps,
         "keys": [{"joint": s.joint, "index": 0,
@@ -299,6 +358,11 @@ fn body(app: &mut SolveApp, ui: &mut egui::Ui, s: &mut State) {
             vector(ui, "Gelenkpunkt (mm)", &mut s.point);
             vector(ui, "Achse", &mut s.axis);
             if ui.button("Gelenk erstellen").clicked() { create_joint(app, s); }
+            ui.horizontal_wrapped(|ui| {
+                if ui.button("3D-Griffe für gewählte Baugruppe").clicked() {
+                    activate_3d_handles(app, s, false);
+                }
+            });
         }
         1 => {
             joint_combo(ui, s);
@@ -345,7 +409,11 @@ fn body(app: &mut SolveApp, ui: &mut egui::Ui, s: &mut State) {
                     app.start("joint.drive");
                 }
             });
-            ui.label("Live-Vorschau kann viele Undo-Schritte anlegen; bei großen Baugruppen deaktivieren.");
+            if ui.button("3D-Griffe am Gelenk anzeigen (Drehen / Verschieben)").clicked() {
+                activate_3d_handles(app, s, true);
+            }
+            ui.label("Die 3D-Griffe von SolidCraft beachten Gelenkgrenzen und gruppieren einen Mauszug zu einem Undo-Schritt.");
+            ui.label("Live-Vorschau per Slider kann dagegen mehrere Undo-Schritte anlegen.");
         }
         2 => {
             occurrence_combo(ui, "robot_tool", "Werkzeugteil", &mut s.effector, &s.occurrences);
