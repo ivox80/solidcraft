@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SolidCraft v0.3 – Convex Direct Modeling</title>
+<style>
+:root{color-scheme:dark;font:14px system-ui,-apple-system,Segoe UI,sans-serif;background:#10151b;color:#eaf2fb}
+*{box-sizing:border-box}body{margin:0}header{height:62px;background:#1b242f;border-bottom:1px solid #3a4b5b;display:flex;align-items:center;padding:0 18px;justify-content:space-between;gap:12px}
+header b{font-size:19px}.blue{color:#4dc3ed}#status{font-size:12px;color:#a7b4c5}
+main{display:grid;grid-template-columns:275px minmax(300px,1fr) 285px;height:calc(100vh - 62px)}
+aside{padding:15px;overflow:auto;background:#1a2430}aside:first-child{border-right:1px solid #3a4b5b}aside:last-child{border-left:1px solid #3a4b5b}
+h3{margin:16px 0 9px;font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:#a3c0d3}
+h3:first-child{margin-top:0}button,select,input{width:100%;background:#29394a;border:1px solid #4a6075;color:#f3f7ff;border-radius:7px;padding:9px;min-width:0;font:inherit}
+button{cursor:pointer}button:hover{background:#344c60}button:disabled{opacity:.43;cursor:not-allowed}button.primary{background:#236883;border-color:#3587a5}
+button.tree{text-align:left;margin-bottom:6px;font-size:12px;line-height:1.5}button.tree.on{border-color:#42cbe4;background:#224a63}
+label{display:grid;gap:4px;font-size:12px;color:#b5c4d2;margin:9px 0}.row{display:flex;gap:7px}.row>*{flex:1}
+#viewport{position:relative;overflow:hidden}canvas{display:block}#overlay{position:absolute;bottom:13px;left:14px;padding:9px;background:#121f2ddd;border:1px solid #344f60;border-radius:6px;pointer-events:none;font-size:12px}
+#inspect{font-size:12px;color:#c4deef;line-height:1.7;min-height:50px}
+#log{white-space:pre-wrap;font-size:12px;color:#adcfb2;line-height:1.5;overflow-wrap:anywhere}
+small{display:block;color:#95aabc;font-size:11px;line-height:1.5;margin:7px 0}
+hr{border:0;border-top:1px solid #3a4b5b;margin:17px 0}
+@media(max-width:850px){main{display:flex;flex-direction:column;height:auto}aside{border:0!important}#viewport{height:350px;order:-1}}
+</style>
+<script type="importmap">{"imports":{"three":"https://esm.sh/three@0.170.0","three/addons/":"https://esm.sh/three@0.170.0/examples/jsm/"}}</script>
+</head>
+<body>
+<header><b>SolidCraft <span class="blue">Direct Modeling v0.3</span></b><div style="display:flex;gap:10px;align-items:center"><a style="color:#72d3f5" href="./v04.html">NURBS v0.4 öffnen</a><span id="status">Rust/WebAssembly wird geladen …</span></div></header>
+<main>
+<aside>
+<h3>Modell / Baugruppen</h3>
+<div id="tree"></div>
+<h3>Körper erzeugen</h3>
+<div class="row"><button id="newBox">+ Quader</button><button id="newCylinder">+ Zylinder</button></div>
+<h3>Multi-Boolean</h3>
+<label>Werkzeugkörper<select id="cutter"></select></label>
+<button id="subtract" class="primary">Von allen Zielkörpern abziehen</button>
+<small>In der linken Liste Zielkörper markieren; Werkzeugkörper separat auswählen.</small>
+<h3>Projekt</h3>
+<div class="row"><button id="reset">Demo zurücksetzen</button><button id="undo">↶ Undo</button></div>
+<div class="row"><button id="save">JSON speichern</button><button id="open">JSON öffnen</button></div>
+<input id="file" type="file" accept=".json,application/json" hidden>
+<hr><h3>Ausgabe</h3><div id="log">Initialisiere ...</div>
+</aside>
+<div id="viewport"><div id="overlay">Links ziehen: Orbit · Rechts ziehen: Pan · Klicken: Fläche wählen · Mausrad: Zoom</div></div>
+<aside>
+<h3>Aktuelle Auswahl</h3><div id="inspect">Noch keine Fläche gewählt.</div>
+<h3>Flächen direkt bearbeiten</h3>
+<label>Flächenversatz entlang Außennormale (mm)<input id="offset" type="number" value="4" step="1"></label>
+<button id="moveFace" class="primary">Gewählte Fläche verschieben</button>
+<small>Auf eine ebene Fläche des Körpers klicken. Die Nachbarflächen werden vom Rust-Kern neu geschnitten und verbunden.</small>
+<h3>Objekt drehen</h3>
+<label>Drehwinkel um Z (Grad)<input id="angle" type="number" value="15" step="5"></label>
+<button id="rotate">Ausgewählten Körper drehen</button>
+<small>Rotation aktuell um den Schwerpunkt jedes konvexen Teilkörpers; keine generische Baugruppen-Transformation.</small>
+<hr><small>Experimental: Nur konvexe, ebene Polygone. Zylinder sind facettiert. Boolean-Ergebnisse bestehen aus konvexen Teilkörpern und sind keine universellen B-Rep-Volumenkörper.</small>
+</aside>
+</main><script type="module" src="./v03.js"></script></body></html>
