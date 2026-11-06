@@ -12,6 +12,7 @@ const KINDS: [&str; 5] = ["revolute", "slider", "cylindrical", "rigid", "ball"];
 struct State {
     open: bool,
     tab: usize,
+    session_uid: Option<u64>,
     a: String,
     b: String,
     name: String,
@@ -39,7 +40,8 @@ struct State {
 impl Default for State {
     fn default() -> Self {
         Self {
-            open: true, tab: 0, a: String::new(), b: String::new(),
+            open: true, tab: 0, session_uid: None,
+            a: String::new(), b: String::new(),
             name: "Robot Joint".into(), joint_kind: 0,
             point: [0.0; 3], axis: [0.0, 0.0, 1.0], joint: String::new(),
             drive: 0.0, drive_min: -180.0, drive_max: 180.0,
@@ -303,6 +305,36 @@ fn activate_3d_handles(app: &mut SolveApp, s: &mut State, prefer_joint: bool) {
     s.output = "Kein frei bewegliches Gelenk an diesem Bauteil. Gelenktyp, Fixierung oder Zwangsbedingungen prüfen.".into();
 }
 
+fn edit_selected_joint(app: &mut SolveApp, s: &mut State) {
+    let Some(id) = app.session.doc.assembly.joints.iter()
+        .find(|j| j.name == s.joint).map(|j| j.id)
+    else {
+        s.output = "Bitte zuerst ein Gelenk auswählen.".into();
+        return;
+    };
+    match crate::dialogs_assembly::edit_joint(app, id) {
+        Some(dialog) => {
+            crate::joint_handles::close(app);
+            app.tool = None;
+            app.dialog = Some(dialog);
+            s.open = false;
+            s.output = "Grafischen Gelenkeditor geöffnet.".into();
+        }
+        None => s.output = "SolidCraft konnte das Gelenk nicht öffnen.".into(),
+    }
+}
+
+fn find_selected_joint(app: &mut SolveApp, s: &mut State) {
+    let Some(id) = app.session.doc.assembly.joints.iter()
+        .find(|j| j.name == s.joint).map(|j| j.id)
+    else {
+        s.output = "Bitte zuerst ein Gelenk auswählen.".into();
+        return;
+    };
+    crate::dialogs_assembly::find_joint(app, id);
+    s.output = "Ansicht auf die verbundenen Bauteile zentriert.".into();
+}
+
 fn motion_params(s: &State) -> Value {
     let mut args = json!({"name": s.study, "steps": s.steps,
         "keys": [{"joint": s.joint, "index": 0,
@@ -409,9 +441,17 @@ fn body(app: &mut SolveApp, ui: &mut egui::Ui, s: &mut State) {
                     app.start("joint.drive");
                 }
             });
-            if ui.button("3D-Griffe am Gelenk anzeigen (Drehen / Verschieben)").clicked() {
-                activate_3d_handles(app, s, true);
-            }
+            ui.horizontal_wrapped(|ui| {
+                if ui.button("3D-Griffe am Gelenk anzeigen").clicked() {
+                    activate_3d_handles(app, s, true);
+                }
+                if ui.button("Gelenk im Modell suchen").clicked() {
+                    find_selected_joint(app, s);
+                }
+                if ui.button("Gelenkachse grafisch bearbeiten").clicked() {
+                    edit_selected_joint(app, s);
+                }
+            });
             ui.label("Die 3D-Griffe von SolidCraft beachten Gelenkgrenzen und gruppieren einen Mauszug zu einem Undo-Schritt.");
             ui.label("Live-Vorschau per Slider kann dagegen mehrere Undo-Schritte anlegen.");
         }
@@ -479,6 +519,10 @@ fn body(app: &mut SolveApp, ui: &mut egui::Ui, s: &mut State) {
 pub fn show(app: &mut SolveApp, ctx: &egui::Context) {
     let key = egui::Id::new(STATE_ID);
     let mut state = ctx.data_mut(|d| d.get_temp::<State>(key)).unwrap_or_default();
+    if state.session_uid != Some(app.session.uid) {
+        state.session_uid = Some(app.session.uid);
+        refresh(app, &mut state);
+    }
     if ctx.input(|i| i.modifiers.ctrl && i.modifiers.shift && i.key_pressed(egui::Key::R)) {
         state.open = !state.open;
     }
