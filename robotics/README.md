@@ -47,8 +47,16 @@ Toggle with **Ctrl+Shift+R**. When closed, a launcher appears at top-right.
   Joint dialog, where native face/edge snaps are available.
 - **Antrieb**: select a joint and move by degrees (revolute) or mm (slider).
   Copy its current value with **Istwert**. A configurable slider can optionally
-  update the pose live; many live updates can create extra undo steps. The native
-  Drive Joint dialog is available as a fallback.
+  update the pose live; many live updates can create extra undo steps.
+  Press **3D-Griffe am Gelenk anzeigen** to close the toolbox and activate the
+  actual SolidCraft viewport rings/arrows on the moving link. Drag a ring to
+  rotate or an arrow to slide. This reuses SolidCraft's undo-coalescing,
+  limits, loop and contact handling. A disabled setting, grounded link or
+  overconstrained mechanism will be reported instead of moving.
+  **Gelenk im Modell suchen** fits the camera to the connected components.
+  **Gelenkachse grafisch bearbeiten** opens the *real SolidCraft Edit Joint*
+  dialog so pivots, snaps and axis definitions can be changed interactively.
+  The native Drive Joint dialog remains available as a fallback.
 - **Zielpunkt**: select an end-effector and an absolute world coordinate;
   call SolidCraft native `joint.reach` inverse kinematics.
 - **Timeline**: create or update a keyed motion study (an existing name updates
@@ -65,12 +73,29 @@ Validate collisions and constraints before any real robot actuation.
 ## Testing checklist
 
 1. Open `robot_arm_two_axes.sc` in the new SolidCraft executable.
-2. Open **Machine & Robotics → Antrieb**, click **Neu laden**, choose `Shoulder`.
-3. Press **Istwert**, drag the slider, then **Gelenk bewegen** and check motion.
-4. Switch to **Timeline**, choose `Robot Arm Cycle`, set frame 50, play the frame.
-5. Select a straight edge or cylindrical face in the viewport and use the
+2. Open **Machine & Robotics → Antrieb** and choose `Shoulder`
+   (the joint list now refreshes automatically when a design is opened).
+3. Press **3D-Griffe am Gelenk anzeigen**. Rotate the blue joint rings on
+   the 3D model directly; confirm the connected arm moves and no dialog
+   remains in the way. Toggle the toolbox with **Ctrl+Shift+R**.
+4. For the manual path, press **Istwert**, drag the slider, then
+   **Gelenk bewegen** and inspect the pose.
+5. Switch to **Timeline**, choose `Robot Arm Cycle`, set frame 50, play the frame.
+6. Select a straight edge or cylindrical face in the viewport and use the
    geometry-to-axis button, or open the native graphical Joint dialog.
-6. Run the motion interference check and inspect its status (including truncation).
+7. Run the motion interference check and inspect its status (including truncation).
 
 A green CI build verifies compile/tests plus generation of the CAD fixture.
 A visual mouse-and-window acceptance test still requires running the executable.
+
+## Implementation note
+
+No new geometry solver is introduced for the manipulator. The toolbox invokes
+`crate::joint_handles::begin(app, occurrence_id)` after selecting the same
+occurrence via `select.set`. That is necessary because SolidCraft's viewport
+calls `joint_handles::sync` each frame and closes mismatched selections.
+The tooling uses `dialogs_assembly::edit_joint` for graphic axis relocation,
+which is deliberately distinct from *driving* the joint's angular/linear DOF.
+`#[test] native_3d_grips_open_for_a_robot_joint` exercises revolute and
+slider handles through SolidCraft's own egui Harness; CI must pass before the
+Windows artifact is considered validated.
