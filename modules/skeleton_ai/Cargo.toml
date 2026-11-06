@@ -2,6 +2,7 @@
 name = "solidcraft-skeleton-ai"
 version = "0.5.0"
 edition = "2021"
+default-run = "skeleton-ai"
 description = "Native Rust SDF geometry module for SolidCraft skeletons with independently adjustable end profiles"
 license = "MIT"
 
