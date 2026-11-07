@@ -1,0 +1,60 @@
+name: TextilLab Native SolidCraft Integration
+
+on:
+  pull_request:
+    paths:
+      - "native-integration/**"
+      - "textillab/**"
+      - ".github/workflows/native-textillab.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-textillab-\${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  native:
+    name: SolidCraft egui native compile
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - name: Checkout TextilLab modules
+        uses: actions/checkout@v4
+        with:
+          path: modules
+
+      - name: Checkout pinned upstream SolidCraft source
+        uses: actions/checkout@v4
+        with:
+          repository: tangency-labs/solidcraft
+          ref: dc679cae34fb7db4e6b230b45256c1b2554cabca
+          path: upstream
+          fetch-depth: 1
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Add TextilLab native source patch
+        run: python3 modules/native-integration/apply_to_upstream.py upstream
+
+      - name: Cache upstream Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: upstream
+
+      - name: Format integrated source
+        working-directory: upstream
+        run: cargo fmt --all
+
+      - name: Compile native SolidCraft UI
+        working-directory: upstream
+        run: cargo check -p solidcraft-ui-egui --lib
+
+      - name: Native TextilLab regression test
+        working-directory: upstream
+        run: cargo test -p solidcraft-ui-egui --lib textillab_panel::tests
