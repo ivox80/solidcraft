@@ -3,7 +3,6 @@
 
 use egui::{Align2, Color32, Id, Pos2, Rect, Sense, Stroke, Vec2};
 use serde_json::json;
-use std::collections::BTreeSet;
 use textillab::obj_import::{mesh_edges, parse_obj};
 use textillab::studio_patterns::{make_cut_preview, patch_boundary};
 use textillab::unfold::{TriangleMesh, Vec3};
@@ -186,7 +185,7 @@ impl PanelState {
                 self.refresh();
             }
             if let Some(mesh) = self.mesh.as_ref() {
-                draw_cut_preview(&mut columns[1], mesh);
+                draw_cut_preview(&mut columns[1], mesh, self.seam_mm, self.density_g_m2);
             } else {
                 columns[1].label("Noch kein Schnittmuster.");
             }
@@ -268,7 +267,7 @@ fn draw_mesh(ui: &mut egui::Ui, mesh: &TriangleMesh) -> Option<(usize, usize)> {
     chosen
 }
 
-fn draw_cut_preview(ui: &mut egui::Ui, mesh: &TriangleMesh) {
+fn draw_cut_preview(ui: &mut egui::Ui, mesh: &TriangleMesh, allowance_mm: f64, density_g_m2: f64) {
     let (rect, _) = ui.allocate_exact_size(Vec2::new(358.0, 310.0), Sense::hover());
     let painter = ui.painter_at(rect);
     painter.rect_filled(rect, 4.0, Color32::from_rgb(19, 32, 42));
@@ -276,24 +275,57 @@ fn draw_cut_preview(ui: &mut egui::Ui, mesh: &TriangleMesh) {
         return;
     };
     let mut boundaries = Vec::new();
-    for patch in &unfolded.patches {
+    let mut cutting = Vec::new();
+    for (index, patch) in unfolded.patches.iter().enumerate() {
         if let Ok(boundary) = patch_boundary(mesh, patch) {
+            let cut = if allowance_mm <= 0.0 {
+                Some(boundary.clone())
+            } else {
+                let pattern = textillab::Pattern {
+                    name: format!("Teil {}", index + 1),
+                    outline: boundary.clone(),
+                    seam_allowance_mm: allowance_mm,
+                    material: textillab::Material {
+                        name: "textile".into(),
+                        areal_density_g_m2: density_g_m2,
+                        thickness_mm: 0.5,
+                    }
+                };
+                pattern.cut_outline().ok()
+            };
             boundaries.push(boundary);
+            if let Some(cut) = cut {
+                cutting.push(cut);
+            }
         }
     }
-    let all: Vec<(f64,f64)> = boundaries.iter().flat_map(|b| b.iter().map(|p| (p.x, p.y))).collect();
+    let all: Vec<(f64,f64)> = boundaries.iter()
+        .chain(cutting.iter())
+        .flat_map(|b| b.iter().map(|p| (p.x, p.y)))
+        .collect();
     let projected = scaled_points(&all, rect);
-    let mut start = 0;
+    let mut offset = 0;
     for polygon in boundaries {
-        let end = start + polygon.len();
-        if let Some(positions) = projected.get(start..end) {
+        let end = offset + polygon.len();
+        if let Some(positions) = projected.get(offset..end) {
             for i in 0..positions.len() {
                 if let (Some(&a),Some(&b)) = (positions.get(i),positions.get((i+1)%positions.len())) {
-                    painter.line_segment([a,b], Stroke::new(2.0, Color32::from_rgb(107, 211, 209)));
+                    painter.line_segment([a,b], Stroke::new(1.4, Color32::from_rgb(107, 211, 209)));
                 }
             }
         }
-        start=end;
+        offset=end;
+    }
+    for polygon in cutting {
+        let end = offset + polygon.len();
+        if let Some(positions) = projected.get(offset..end) {
+            for i in 0..positions.len() {
+                if let (Some(&a),Some(&b)) = (positions.get(i),positions.get((i+1)%positions.len())) {
+                    painter.line_segment([a,b], Stroke::new(2.0, Color32::from_rgb(249, 158, 112)));
+                }
+            }
+        }
+        offset=end;
     }
 }
 
