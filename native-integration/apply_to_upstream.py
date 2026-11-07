@@ -27,7 +27,7 @@ RUST_FILES = (
 )
 
 
-def replace_once(path: Path, marker: str, insertion: str) -> None:
+def insert_after_once(path: Path, marker: str, insertion: str) -> None:
     text = path.read_text(encoding="utf-8")
     if insertion in text:
         return
@@ -37,7 +37,7 @@ def replace_once(path: Path, marker: str, insertion: str) -> None:
             f"{path}: expected exactly one upstream insertion anchor "
             f"{marker!r}, found {matches}. Upstream may have changed."
         )
-    path.write_text(text.replace(marker, insertion + marker, 1), encoding="utf-8")
+    path.write_text(text.replace(marker, marker + insertion, 1), encoding="utf-8")
 
 
 def integrate(upstream: Path) -> None:
@@ -65,27 +65,27 @@ def integrate(upstream: Path) -> None:
         shutil.copyfile(src, target)
 
     shutil.copyfile(PANEL_SOURCE, native_module)
-    replace_once(
+    insert_after_once(
         ui_manifest,
         "[dependencies]\n",
-        '[dependencies]\ntextillab = { package = "solidcraft-textillab-prototype", path = "../textillab" }\n'
+        'textillab = { package = "solidcraft-textillab-prototype", path = "../textillab" }\n'
     ) if 'textillab = { package = "solidcraft-textillab-prototype"' not in ui_manifest.read_text(encoding="utf-8") else None
 
     replace_once(ui_source, "pub mod access;\n", "mod textillab_panel;\n")
     replace_once(
         ui_source,
         "pub struct SolveApp {\n",
-        "pub struct SolveApp {\n    textillab_panel: textillab_panel::PanelState,\n",
+        "    textillab_panel: textillab_panel::PanelState,\n",
     )
     replace_once(
         ui_source,
         "        let mut app = SolveApp {\n",
-        "        let mut app = SolveApp {\n            textillab_panel: Default::default(),\n",
+        "            textillab_panel: Default::default(),\n",
     )
     replace_once(
         ui_source,
         "        self.cad_ui(ui, &mut report_input);\n",
-        "        self.cad_ui(ui, &mut report_input);\n        self.textillab_panel.show(ui.ctx());\n",
+        "        self.textillab_panel.show(ui.ctx());\n",
     )
     print(f"Native TextilLab egui integration applied to: {upstream}")
     print("Compile using: cargo check -p solidcraft-ui-egui --lib")
