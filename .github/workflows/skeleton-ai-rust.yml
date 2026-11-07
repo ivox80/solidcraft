@@ -1,0 +1,58 @@
+name: Skeleton AI Rust CI
+on:
+  push:
+    paths:
+      - 'modules/skeleton_ai/**'
+      - '.github/workflows/skeleton-ai-rust.yml'
+  pull_request:
+    paths:
+      - 'modules/skeleton_ai/**'
+      - '.github/workflows/skeleton-ai-rust.yml'
+jobs:
+  rust-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt,clippy
+      - name: Check
+        working-directory: modules/skeleton_ai
+        run: cargo check --all-targets
+      - name: Unit tests
+        working-directory: modules/skeleton_ai
+        run: cargo test
+      - name: Generate sample model
+        working-directory: modules/skeleton_ai
+        run: cargo run --release -- --input examples/two_sided_profiles.json --output two_sided.stl --resolution 36
+      - name: Editor HTTP round-trip smoke test
+        working-directory: modules/skeleton_ai
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo run --bin skeleton-editor -- --input examples/two_sided_profiles.json --port 18765 >/tmp/skeleton-editor.log 2>&1 &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || true' EXIT
+          ready=0
+          for i in $(seq 1 50); do
+            if curl --silent --fail http://127.0.0.1:18765/api/health >/dev/null; then ready=1; break; fi
+            sleep 0.5
+          done
+          if [ "$ready" -ne 1 ]; then cat /tmp/skeleton-editor.log; exit 1; fi
+          python3 - <<'PYTHON'
+          import json, urllib.request
+          base = 'http://127.0.0.1:18765'
+          def get(path):
+              with urllib.request.urlopen(base + path, timeout=30) as r: return r.read()
+          assert b'SolidCraft' in get('/')
+          doc = json.loads(get('/api/state'))
+          original = doc['nodes'][1][0]
+          doc['nodes'][1][0] = original + 0.123
+          request = urllib.request.Request(base+'/api/state',data=json.dumps(doc).encode(),method='POST',headers={'Content-Type':'application/json','X-SolidCraft-Editor':'1'})
+          with urllib.request.urlopen(request, timeout=30) as r: assert json.load(r)['ok']
+          updated = json.loads(get('/api/state'))
+          assert abs(updated['nodes'][1][0] - original - 0.123) < 1e-9
+          mesh = json.loads(get('/api/mesh?resolution=24'))
+          assert mesh['triangles'] > 0 and len(mesh['vertices']) > 0
+          print('Editor live HTTP endpoints OK:',mesh['triangles'],'triangles')
+          PYTHON

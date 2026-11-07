@@ -1,0 +1,19 @@
+[package]
+name = "solidcraft-skeleton-ai"
+version = "0.5.0"
+edition = "2021"
+default-run = "skeleton-ai"
+description = "Native Rust SDF geometry module for SolidCraft skeletons with independently adjustable end profiles"
+license = "MIT"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[lib]
+name = "solidcraft_skeleton_ai"
+path = "src/lib.rs"
+
+[[bin]]
+name = "skeleton-ai"
+path = "src/main.rs"

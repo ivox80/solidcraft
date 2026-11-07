@@ -1,0 +1,15 @@
+{
+  "nodes": [[0, 0, 0], [1.0, 0, 0]],
+  "edges": [[0, 1]],
+  "areas": [0.007],
+  "active": [true],
+  "section_stations": {
+    "0": {
+      "stations": [
+        {"t": 0.0, "profile": "rounded_rectangle", "width": 0.18, "height": 0.10, "corner": 0.30, "twist_deg": 0},
+        {"t": 0.5, "profile": "ellipse", "width": 0.10, "height": 0.07, "twist_deg": 25},
+        {"t": 1.0, "profile": "circle", "width": 0.06, "height": 0.06, "twist_deg": 45}
+      ]
+    }
+  }
+}
