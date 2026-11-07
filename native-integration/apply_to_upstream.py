@@ -69,20 +69,20 @@ def integrate(upstream: Path) -> None:
         ui_manifest,
         "[dependencies]\n",
         'textillab = { package = "solidcraft-textillab-prototype", path = "../textillab" }\n'
-    ) if 'textillab = { package = "solidcraft-textillab-prototype"' not in ui_manifest.read_text(encoding="utf-8") else None
+    )
 
-    replace_once(ui_source, "pub mod access;\n", "mod textillab_panel;\n")
-    replace_once(
+    insert_after_once(ui_source, "pub mod access;\n", "mod textillab_panel;\n")
+    insert_after_once(
         ui_source,
         "pub struct SolveApp {\n",
         "    textillab_panel: textillab_panel::PanelState,\n",
     )
-    replace_once(
+    insert_after_once(
         ui_source,
         "        let mut app = SolveApp {\n",
         "            textillab_panel: Default::default(),\n",
     )
-    replace_once(
+    insert_after_once(
         ui_source,
         "        self.cad_ui(ui, &mut report_input);\n",
         "        self.textillab_panel.show(ui.ctx());\n",
