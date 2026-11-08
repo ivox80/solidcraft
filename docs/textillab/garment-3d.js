@@ -31,19 +31,21 @@ function hoodModel(spec){
  const h=spec.heightMm||320,depth=spec.depthMm||270;
  const headR=(spec.headCircMm||570)/(2*PI);
  const rx=Math.max(headR*1.13,105),rz=Math.max(headR*1.13,depth*.47);
+ const neckFactor=clamp((spec.baseNeckMm||220)/220,.7,1.45);
+ const overlap=spec.faceOverlapMm||0;
  const m=createMesh("Kapuze 3D","#52aabe");
  const rings=[],steps=24,arcs=36;
  for(let i=0;i<=steps;i++){
   const t=i/steps;
   const y=-24+h*t;
   const crownFactor=Math.sqrt(Math.max(.05,1-.81*t*t));
-  const w=rx*(1.15-.29*t)*crownFactor;
+  const w=rx*(1.15-.29*t)*crownFactor*(1+(neckFactor-1)*(1-t));
   const d=rz*(1.1-.18*t)*crownFactor;
   const ring=[];
   for(let k=0;k<=arcs;k++){
    const a=-2.05+4.1*k/arcs;
    const x=Math.sin(a)*w;
-   const z=-Math.cos(a)*d + (depth*.035*t);
+   const z=-Math.cos(a)*d + (depth*.035*t)+overlap*Math.max(0,(Math.abs(a)-1.55)/.5);
    ring.push(v(m,x,y,z));
   }
   rings.push(ring);
