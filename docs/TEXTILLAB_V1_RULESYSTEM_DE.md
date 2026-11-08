@@ -17,14 +17,13 @@ Die Browserzeichnung zeigt – ein- und ausblendbar:
 - Punktnamen: MV/MH (Mitte vorn/hinten), HN (Hals), SP (Schulterpunkt),
   AL (Armloch), BP (Brustpunkt), Ä0, ÄS
 - Maßlinien mit Pfeilen und Zahlen: VL (Vorderlänge), RL (Rückenlänge),
-  Sch (Schulterbreite als Eingabereferenz), BP/2 (halber Brustpunktabstand),
-  ÄL (Ärmellänge), OB (Oberarmumfang als Eingabereferenz)
+  SL (tatsächliche Schulterlinienlänge), BP/2 (halber Brustpunktabstand),
+  ÄL (Ärmellänge), ÄB (tatsächliche Ärmel-Oberarmweite im Schnitt)
 - K1/K2/K3/K4 als Längenkorrektur-Linien sowie Fadenlauf (FDL)
 
 **Wichtig:** Ein Maßtext kann den vollständigen Körperwert oder eine
 Konstruktionsreferenz anzeigen; nicht jede markierte Strecke ist der gesamte
-Körperumfang. Insbesondere Schulterbreite und Oberarmumfang sind
-Körper-Eingabewerte und keine identische Distanz zu einer halben Schnittkontur.
+Körperumfang. Die gezeichnete Schulterlinie und Ärmeloberarmbreite sind **gemessene Schnittstrecken** und können von den eingegebenen vollständigen Körpermaßen abweichen.
 
 **Bedienung:** Auf eine Bemaßung klicken, um das zugehörige Maßfeld
 zur Bearbeitung zu fokussieren. Die Layer können im Seitenpanel deaktiviert

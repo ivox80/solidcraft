@@ -243,8 +243,8 @@ function layeredDrawing(base,d,profile,config,metric) {
     const b=rt.points;
     parts.push(dimension(positions.RT(pt(0,b.topY)),positions.RT(pt(0,b.waistY)),40,"RL",
       "RL "+(profile.measurements.backWaist).toFixed(1)+" cm","backWaist"));
-    parts.push(dimension(positions.VT(f.shoulderStart),positions.VT(f.shoulderEnd),-40,"S",
-      "Sch "+(profile.measurements.shoulder).toFixed(1)+" cm","shoulder"));
+    parts.push(dimension(positions.VT(f.shoulderStart),positions.VT(f.shoulderEnd),-40,"SL",
+      "SL "+(dist(f.shoulderStart,f.shoulderEnd)/10).toFixed(1)+" cm","shoulder"));
     const y=vt.points.bustY;
     parts.push(dimension(positions.VT(pt(0,y)),positions.VT(pt(f.bustPoint[0],y)),45,"BPA",
       "BP/2 "+(profile.measurements.bustSpan/2).toFixed(1)+" cm","bustSpan"));
@@ -253,7 +253,7 @@ function layeredDrawing(base,d,profile,config,metric) {
       "ÄL "+profile.measurements.sleeve.toFixed(1)+" cm","sleeve"));
     if(hasSleeve)parts.push(dimension(positions.AR(pt(0,sleeve.points.bicepY)),
       positions.AR(pt(bwMax,sleeve.points.bicepY)),22,"OU",
-      "OB "+profile.measurements.upperArm.toFixed(1)+" cm","upperArm"));
+      "ÄB "+(bwMax/10).toFixed(1)+" cm","upperArm"));
     parts.push('</g>');
   }
   if(L.alterations) {
