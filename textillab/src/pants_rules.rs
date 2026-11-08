@@ -83,7 +83,7 @@ impl PantsMeasures {
             ("knee",self.knee_mm),("hem",self.hem_mm)
         ] {
             if !x.is_finite() || !(100.0..=2000.0).contains(&x) {
-                return Err(format!("Pants body measure {name} must be 100.0.2000 mm"));
+                return Err(format!("Pants body measure {name} must be 100..2000 mm"));
             }
         }
         for (name,x) in [
@@ -164,13 +164,13 @@ struct Curve {
 }
 impl Curve {
     fn start(a:Point)->Self {
-        Self{poly:vec![a],path:format!("M {:0.3} {:0.3}",a.x,a.y)}
+        Self{poly:vec![a],path:format!("M {:.3} {:.3}",a.x,a.y)}
     }
     fn line(&mut self,b:Point){
         if dist(*self.poly.last().expect("initialised"),b)>1e-8 {
             self.poly.push(b);
         }
-        let _=write!(self.path," L {:0.3} {:0.3}",b.x,b.y);
+        let _=write!(self.path," L {:.3} {:.3}",b.x,b.y);
     }
     fn cubic(&mut self,b:Point,c:Point,d:Point,steps:usize) {
         let a=*self.poly.last().expect("initialised");
@@ -182,7 +182,7 @@ impl Curve {
                 u*u*u*a.y+3.0*u*u*t*b.y+3.0*u*t*t*c.y+t*t*t*d.y,
             ));
         }
-        let _=write!(self.path," C {:0.3} {:0.3} {:0.3} {:0.3} {:0.3} {:0.3}",
+        let _=write!(self.path," C {:.3} {:.3} {:.3} {:.3} {:.3} {:.3}",
             b.x,b.y,c.x,c.y,d.x,d.y);
     }
     fn close(&mut self){
@@ -301,7 +301,7 @@ pub fn export(m:PantsMeasures,seam_mm:f64,density_g_m2:f64)->Result<GarmentExpor
         return Err("Seam allowance must be 0.0.80 mm".into());
     }
     if !density_g_m2.is_finite() || !(1.0..=5000.0).contains(&density_g_m2){
-        return Err("Areal density must be 1.0.5000 g/m2".into());
+        return Err("Areal density must be 1..5000 g/m2".into());
     }
     let d=draft(m)?;
     let mut drawing=String::new();
@@ -327,12 +327,12 @@ pub fn export(m:PantsMeasures,seam_mm:f64,density_g_m2:f64)->Result<GarmentExpor
     let width=total_width+70.0;
     let height=max_height+175.0;
     let _=writeln!(drawing,
-        "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 {width:0.3} {height:0.3}\" width=\"{width:0.3}mm\" height=\"{height:0.3}mm\" data-pants-system=\"textillab.pants.experimental.1\" data-pieces=\"4\">");
+        "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 {width:.3} {height:.3}\" width=\"{width:.3}mm\" height=\"{height:.3}mm\" data-pants-system=\"textillab.pants.experimental.1\" data-pieces=\"4\">");
     drawing.push_str("<rect width=\"100%\" height=\"100%\" fill=\"#14202e\"/>\n");
     drawing.push_str("<text x=\"35\" y=\"24\" fill=\"#d9e6ef\" font-size=\"16\">TEXTILLAB · HOSEN-GRUNDSCHNITT · VH / HH</text>\n");
     for (panel,(outside,xmin,xmax,ymin,_ymax)) in d.panels.iter().zip(bounds.iter()){
         let dx=x-xmin;let dy=65.0-ymin;
-        let _=writeln!(drawing,"<g transform=\"translate({dx:0.3} {dy:0.3})\">");
+        let _=writeln!(drawing,"<g transform=\"translate({dx:.3} {dy:.3})\">");
         let _=writeln!(drawing,
             "<path d=\"{}\" fill=\"#264554\" fill-opacity=\"0.36\" stroke=\"#7cdae1\" stroke-width=\"1.7\" stroke-dasharray=\"4 3\"/>",panel.svg_path);
         if seam_mm>0.0 {
@@ -345,18 +345,18 @@ pub fn export(m:PantsMeasures,seam_mm:f64,density_g_m2:f64)->Result<GarmentExpor
             ("Kn",panel.levels.knee),("Sa",panel.levels.hem)
         ]{
             let _=writeln!(drawing,
-                "<path d=\"M {:0.3} {y:0.3} H {:0.3}\" stroke=\"#4b7892\" stroke-width=\"0.8\" stroke-dasharray=\"5 5\"/>",
+                "<path d=\"M {:.3} {y:.3} H {:.3}\" stroke=\"#4b7892\" stroke-width=\"0.8\" stroke-dasharray=\"5 5\"/>",
                 xmin-15.0,xmax+15.0);
             let _=writeln!(drawing,
-                "<text x=\"{:0.3}\" y=\"{:0.3}\" fill=\"#a8bed0\" font-size=\"10\">{label}</text>",
+                "<text x=\"{:.3}\" y=\"{:.3}\" fill=\"#a8bed0\" font-size=\"10\">{label}</text>",
                 xmax+17.0,y-5.0);
         }
         let y0=panel.levels.rise+48.0;
         let y1=panel.levels.hem-40.0;
         let _=writeln!(drawing,
-            "<path d=\"M 0 {y0:0.3} V {y1:0.3}\" stroke=\"#d4d37c\" stroke-width=\"1.3\" stroke-dasharray=\"10 5\"/>");
+            "<path d=\"M 0 {y0:.3} V {y1:.3}\" stroke=\"#d4d37c\" stroke-width=\"1.3\" stroke-dasharray=\"10 5\"/>");
         let _=writeln!(drawing,
-            "<text x=\"9\" y=\"{:0.3}\" fill=\"#d4d37c\" font-size=\"11\">FDL</text>",(y0+y1)*0.5);
+            "<text x=\"9\" y=\"{:.3}\" fill=\"#d4d37c\" font-size=\"11\">FDL</text>",(y0+y1)*0.5);
         if !panel.darts.is_empty() {
             let _=writeln!(drawing,
                 "<polyline fill=\"none\" stroke=\"#fa9fa3\" stroke-width=\"1.6\" points=\"{}\"/>",
@@ -364,13 +364,13 @@ pub fn export(m:PantsMeasures,seam_mm:f64,density_g_m2:f64)->Result<GarmentExpor
         }
         for (tag,p) in &panel.marks {
             let _=writeln!(drawing,
-                "<circle cx=\"{:0.3}\" cy=\"{:0.3}\" r=\"2.5\" fill=\"#80d9e0\"/>\
-                 <text x=\"{:0.3}\" y=\"{:0.3}\" fill=\"#bedce2\" font-size=\"9\">{tag}</text>",
+                "<circle cx=\"{:.3}\" cy=\"{:.3}\" r=\"2.5\" fill=\"#80d9e0\"/>\
+                 <text x=\"{:.3}\" y=\"{:.3}\" fill=\"#bedce2\" font-size=\"9\">{tag}</text>",
                 p.x,p.y,p.x+5.0,p.y-5.0);
         }
         drawing.push_str("</g>\n");
         let _=writeln!(drawing,
-            "<text x=\"{:0.3}\" y=\"59\" text-anchor=\"middle\" fill=\"#e0edf7\" font-size=\"13\">{} · {} · 2×</text>",
+            "<text x=\"{:.3}\" y=\"59\" text-anchor=\"middle\" fill=\"#e0edf7\" font-size=\"13\">{} · {} · 2×</text>",
             x+(xmax-xmin)*0.5,panel.id,panel.piece.name);
         sewn+=garments::area(&panel.piece.outline).abs()*2.0;
         cut+=garments::area(outside).abs()*2.0;
@@ -378,11 +378,11 @@ pub fn export(m:PantsMeasures,seam_mm:f64,density_g_m2:f64)->Result<GarmentExpor
     }
     let mass=cut*density_g_m2/1_000_000.0;
     let _=writeln!(drawing,
-        "<text x=\"35\" y=\"{:0.3}\" fill=\"#a4bacb\" font-size=\"10\">KONZEPT-GRUNDSCHNITT · Müller &amp; Sohn-Regeln noch nicht validiert · Seitennaht Δ {:0.1} mm · Innenbein Δ {:0.1} mm</text>",
+        "<text x=\"35\" y=\"{:.3}\" fill=\"#a4bacb\" font-size=\"10\">KONZEPT-GRUNDSCHNITT · Müller &amp; Sohn-Regeln noch nicht validiert · Seitennaht Δ {:.1} mm · Innenbein Δ {:.1} mm</text>",
         height-20.0,d.checks.side_diff_mm,d.checks.inseam_diff_mm);
     drawing.push_str("</svg>\n");
     drawing=drawing.replace("data-pieces=\"4\"",
-        &format!("data-pieces=\"4\" data-sewn-area=\"{sewn:0.3}\" data-cut-area=\"{cut:0.3}\" data-mass=\"{mass:0.3}\""));
+        &format!("data-pieces=\"4\" data-sewn-area=\"{sewn:.3}\" data-cut-area=\"{cut:.3}\" data-mass=\"{mass:.3}\""));
     Ok(GarmentExport{
         svg:drawing,
         parts:d.panels.into_iter().map(|p|p.piece).collect(),
