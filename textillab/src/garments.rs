@@ -473,11 +473,13 @@ pub fn draft(kind: Garment, m: Measurements) -> Result<Vec<Piece>, String> {
                 "Placeholder straight collar",
             ),
         ],
-        Garment::Trousers => crate::pants_rules::draft(crate::pants_rules::PantsMeasures::from_general(m))?
-            .panels
-            .into_iter()
-            .map(|p| p.piece)
-            .collect(),
+        Garment::Trousers => {
+            crate::pants_rules::draft(crate::pants_rules::PantsMeasures::from_general(m))?
+                .panels
+                .into_iter()
+                .map(|p| p.piece)
+                .collect()
+        }
         Garment::Glove => glove(m),
         Garment::Beanie => beanie(m),
         Garment::Hat => hat(m),
@@ -575,7 +577,11 @@ pub fn export_svg(
         return crate::bodice_v2::export(m, seam_mm, density_g_m2);
     }
     if kind == Garment::Trousers {
-        return crate::pants_rules::export(crate::pants_rules::PantsMeasures::from_general(m), seam_mm, density_g_m2);
+        return crate::pants_rules::export(
+            crate::pants_rules::PantsMeasures::from_general(m),
+            seam_mm,
+            density_g_m2,
+        );
     }
     let parts = draft(kind, m)?;
     let mut shapes = String::new();
