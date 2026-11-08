@@ -33,6 +33,9 @@ const SOURCE_RELATIONS=Object.freeze([
  {id:"M08",label:"Vordere Halsansatzstrecke",formula:"Länge des Vorderhalslochs",status:"public-number",depends:["frontNeck"]},
  {id:"M09",label:"Lockerungszugabe",formula:"4 bis 5 cm an der vertikalen Ausgangsstrecke",status:"public-number",depends:["variant"]},
  {id:"M10",label:"Abnäherlose Kapuze",formula:"Kapuzenhöhe 35 cm, Tiefe ca. 31 cm, Vorderübertritt 2 cm",status:"public-number",depends:["variant"]},
+ {id:"M11",label:"Halslochänderung bei abnäherloser Form",formula:"Vordere Mitte +2 cm, Schulter +1 cm, hintere Mitte +0,5 cm",status:"public-number",depends:["variant"]},
+ {id:"M12",label:"Abnäherlose Kapuzenrundung",formula:"Referenzabstand 5 bis 6 cm",status:"public-number",depends:["variant"]},
+ {id:"M13",label:"Abnäherlose Hilfspunktabstände",formula:"1,5 cm abwärts, 9 cm aufwärts, 4 cm seitwärts",status:"public-number",depends:["variant"]},
  {id:"TL11",label:"Geometrischer Nahtabgleich",formula:"Hood seam arc length = garment neckline arc length",status:"textillab-independent"}
 ]);
 function finite(cm,label,min,max){
@@ -153,8 +156,10 @@ function draft(values={}){
  const flags=[];
  if(!v.sourceProfileVerified)flags.push("Für "+PROFILES[v.profile].label+" fehlen veröffentlichte vollständige Konstruktionsregeln; nur experimenteller Formvorschlag.");
  if(!v.sourceHeightWithinRange)flags.push("Kapuzenhöhe außerhalb des veröffentlichten Bereichs der gewählten Variante.");
+ if(v.variant==="close"&&(v.hoodDepth<260||v.hoodDepth>280))flags.push("Anliegende Variante: Kapuzentiefe außerhalb der veröffentlichten 26–28 cm.");
  if(v.profile==="child")flags.push("Kinder: Sichtfeld, Halsöffnung und Verzicht auf gefährdende Kordeln prüfen.");
- if(v.variant==="dartless")flags.push("Abnäherlose Variante: vereinfachte Form, nicht exakte Umsetzung der Verlagsskizze.");
+ if(v.variant==="dartless")flags.push("Abnäherlose Variante: Halsloch-Erweiterungen (+2/+1/+0,5 cm) müssen zuerst am Oberteil konstruiert und die neuen Halslinien gemessen werden.");
+ flags.push("Alle Bézier-Konturen sind eigenständige Näherungen; Passform und Abnäher sind nicht nach Müller & Sohn geprüft.");
  if(checks.some(c=>c.status==="fail"))flags.push("Nahtprüfung nicht bestanden – vor dem Zuschnitt abgleichen.");
  flags.push("3D-Ansicht ist eine geometrische Drapierung, keine physikalische Stoffsimulation.");
  const points={K1:[0,0],K2:[0,-v.neckWidth-v.frontNeckDrop-(loose?45:0)],
