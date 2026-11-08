@@ -175,7 +175,9 @@
     if(checks.inseamDifferenceMm>8)warnings.push("Innenbeinnähte weichen mehr als 8 mm ab – Einhalteverteilung prüfen");
     warnings.push("Leibhöhe, Sitzkurve und Abnäher sind noch nicht an einem Probeteil geprüft");
     return {pieces,checks,rules:ruleRecords(m,pieces),measurements:m,
-      bodyValues:{...DEFAULTS,...values},warnings,system:RULESET};
+      // DOM input values arrive as strings; keep the validated cm values numeric.
+      bodyValues:Object.fromEntries(Object.keys(DEFAULTS).map(key=>[key,m[key]/10])),
+      warnings,system:RULESET};
   }
   function offset(poly,mm) {
     if(!mm)return poly.map(p=>[...p]);
