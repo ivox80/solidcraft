@@ -130,8 +130,7 @@ impl Default for Settings {
 impl Settings {
     fn validate(self) -> Result<(), String> {
         self.alterations.validate()?;
-        if !self.target_cap_ease_mm.is_finite()
-            || !(0.0..=45.0).contains(&self.target_cap_ease_mm)
+        if !self.target_cap_ease_mm.is_finite() || !(0.0..=45.0).contains(&self.target_cap_ease_mm)
         {
             return Err("Target sleeve ease must be 0..45 mm".into());
         }
@@ -150,9 +149,8 @@ pub fn apply(m: Measurements, settings: Settings) -> Result<Measurements, String
     m.front_length_mm += settings.alterations.torso_mm;
     m.back_waist_mm += settings.alterations.torso_mm;
     m.waist_to_hip_mm += settings.alterations.hip_mm;
-    m.hem_below_waist_mm += settings.alterations.hip_mm
-        + settings.alterations.hem_mm
-        + settings.style.hem_mm();
+    m.hem_below_waist_mm +=
+        settings.alterations.hip_mm + settings.alterations.hem_mm + settings.style.hem_mm();
     m.sleeve_mm += settings.alterations.sleeve_mm;
     m.validate()?;
     Ok(m)
@@ -255,14 +253,54 @@ pub struct RuleValue {
 }
 pub fn rule_values(m: Measurements, seam: &SeamReport) -> Vec<RuleValue> {
     vec![
-        RuleValue {id:"R01",name:"Brust-Teilungsweite",formula:"(Br+Mehrweite)/4",value_mm:(m.chest_mm+m.ease_mm)*0.25},
-        RuleValue {id:"R02",name:"Taillen-Teilungsweite",formula:"(Ta+Mehrweite)/4",value_mm:(m.waist_mm+m.ease_mm)*0.25},
-        RuleValue {id:"R03",name:"Hüft-Teilungsweite",formula:"(Hü+Mehrweite)/4",value_mm:(m.hip_mm+m.ease_mm)*0.25},
-        RuleValue {id:"R04",name:"Armlochhöhe",formula:"Armlochtiefe",value_mm:m.armhole_depth_mm},
-        RuleValue {id:"R05",name:"Vorderlänge",formula:"Hals-Taille",value_mm:m.front_length_mm},
-        RuleValue {id:"R06",name:"Rückenlänge",formula:"Hals-Taille",value_mm:m.back_waist_mm},
-        RuleValue {id:"R07",name:"Ärmelkugel",formula:"Armloch+Einhalteweite",value_mm:seam.sleeve_cap_mm},
-        RuleValue {id:"R08",name:"Seitennaht-Differenz",formula:"|VT-RT|",value_mm:seam.side_difference_mm},
+        RuleValue {
+            id: "R01",
+            name: "Brust-Teilungsweite",
+            formula: "(Br+Mehrweite)/4",
+            value_mm: (m.chest_mm + m.ease_mm) * 0.25,
+        },
+        RuleValue {
+            id: "R02",
+            name: "Taillen-Teilungsweite",
+            formula: "(Ta+Mehrweite)/4",
+            value_mm: (m.waist_mm + m.ease_mm) * 0.25,
+        },
+        RuleValue {
+            id: "R03",
+            name: "Hüft-Teilungsweite",
+            formula: "(Hü+Mehrweite)/4",
+            value_mm: (m.hip_mm + m.ease_mm) * 0.25,
+        },
+        RuleValue {
+            id: "R04",
+            name: "Armlochhöhe",
+            formula: "Armlochtiefe",
+            value_mm: m.armhole_depth_mm,
+        },
+        RuleValue {
+            id: "R05",
+            name: "Vorderlänge",
+            formula: "Hals-Taille",
+            value_mm: m.front_length_mm,
+        },
+        RuleValue {
+            id: "R06",
+            name: "Rückenlänge",
+            formula: "Hals-Taille",
+            value_mm: m.back_waist_mm,
+        },
+        RuleValue {
+            id: "R07",
+            name: "Ärmelkugel",
+            formula: "Armloch+Einhalteweite",
+            value_mm: seam.sleeve_cap_mm,
+        },
+        RuleValue {
+            id: "R08",
+            name: "Seitennaht-Differenz",
+            formula: "|VT-RT|",
+            value_mm: seam.side_difference_mm,
+        },
     ]
 }
 fn point_svg(s: &mut String, x: f64, y: f64, name: &str) {
@@ -298,48 +336,108 @@ pub fn overlay_svg(
 ) -> Result<String, String> {
     let panels = bodice_v2::draft(m)?;
     let sleeve = bodice_v2::draft_sleeve_with_cap(m, Some(seam.cap_height_mm))?;
-    let fw = panels[0].piece.outline.iter().map(|p|p.x).fold(0.0, f64::max);
-    let bw = panels[1].piece.outline.iter().map(|p|p.x).fold(0.0, f64::max);
+    let fw = panels[0]
+        .piece
+        .outline
+        .iter()
+        .map(|p| p.x)
+        .fold(0.0, f64::max);
+    let bw = panels[1]
+        .piece
+        .outline
+        .iter()
+        .map(|p| p.x)
+        .fold(0.0, f64::max);
     let fx = 75.0;
     let bx = fx + fw + 100.0;
     let ax = bx + bw + 100.0;
     let ay = 95.0;
-    let arw = sleeve.piece.outline.iter().map(|p|p.x).fold(0.0, f64::max);
-    let mut o = String::from("<g id=\"textillab-construction-overlay\" data-ruleset=\"textillab-experimental-1.0\">\n");
-    for (x, panel, front) in [(fx,&panels[0],true),(bx,&panels[1],false)] {
-        let width = panel.piece.outline.iter().map(|p|p.x).fold(0.0, f64::max);
-        let left = if front {x} else {x+width};
+    let arw = sleeve.piece.outline.iter().map(|p| p.x).fold(0.0, f64::max);
+    let mut o = String::from(
+        "<g id=\"textillab-construction-overlay\" data-ruleset=\"textillab-experimental-1.0\">\n",
+    );
+    for (x, panel, front) in [(fx, &panels[0], true), (bx, &panels[1], false)] {
+        let width = panel.piece.outline.iter().map(|p| p.x).fold(0.0, f64::max);
+        let left = if front { x } else { x + width };
         let bust = panel.bust_y;
-        for y in [bust,panel.waist_y,panel.hip_y,panel.hem_y] {
-            horizontal(&mut o,x-11.0,x+width+11.0,y,"#426879");
+        for y in [bust, panel.waist_y, panel.hip_y, panel.hem_y] {
+            horizontal(&mut o, x - 11.0, x + width + 11.0, y, "#426879");
         }
-        let p=&panel.piece.outline;
-        for (ix,name) in [(0,if front {"MV"}else{"MH"}),(24,"HN"),(25,"SP"),(55,"AL")]{
-            let point=p[ix];
-            let xat=if front{x+point.x}else{x+width-point.x};
-            point_svg(&mut o,xat,point.y,name);
+        let p = &panel.piece.outline;
+        for (ix, name) in [
+            (0, if front { "MV" } else { "MH" }),
+            (24, "HN"),
+            (25, "SP"),
+            (55, "AL"),
+        ] {
+            let point = p[ix];
+            let xat = if front {
+                x + point.x
+            } else {
+                x + width - point.x
+            };
+            point_svg(&mut o, xat, point.y, name);
         }
-        let bp=panel.bust_point;
-        point_svg(&mut o,if front{x+bp.x}else{x+width-bp.x},bp.y,"BP");
-        let id=if front {"VL"} else {"RL"};
-        let height=if front {m.front_length_mm}else{m.back_waist_mm};
-        dimension_y(&mut o,if front{left-39.0}else{left+39.0},475.0-height,475.0,id,height);
-        horizontal(&mut o,x+8.0,x+width-8.0,(bust+475.0)*0.5,"#c48ce0");
-        horizontal(&mut o,x+8.0,x+width-8.0,(475.0+panel.hip_y)*0.5,"#c48ce0");
-        horizontal(&mut o,x+8.0,x+width-8.0,(panel.hip_y+panel.hem_y)*0.5,"#c48ce0");
+        let bp = panel.bust_point;
+        point_svg(
+            &mut o,
+            if front { x + bp.x } else { x + width - bp.x },
+            bp.y,
+            "BP",
+        );
+        let id = if front { "VL" } else { "RL" };
+        let height = if front {
+            m.front_length_mm
+        } else {
+            m.back_waist_mm
+        };
+        dimension_y(
+            &mut o,
+            if front { left - 39.0 } else { left + 39.0 },
+            475.0 - height,
+            475.0,
+            id,
+            height,
+        );
+        horizontal(
+            &mut o,
+            x + 8.0,
+            x + width - 8.0,
+            (bust + 475.0) * 0.5,
+            "#c48ce0",
+        );
+        horizontal(
+            &mut o,
+            x + 8.0,
+            x + width - 8.0,
+            (475.0 + panel.hip_y) * 0.5,
+            "#c48ce0",
+        );
+        horizontal(
+            &mut o,
+            x + 8.0,
+            x + width - 8.0,
+            (panel.hip_y + panel.hem_y) * 0.5,
+            "#c48ce0",
+        );
     }
     if include_sleeve {
-        let cap = sleeve.cap_y+ay;
-        let elbow=sleeve.cuff_y*0.63+ay;
-        let hem=sleeve.cuff_y+ay;
-        for (y,tag) in [(cap,"OB"),(elbow,"ELL"),(hem,"AS")] {
-            horizontal(&mut o,ax-10.0,ax+arw+10.0,y,"#426879");
-            let _=writeln!(o,"<text x=\"{:.3}\" y=\"{:.3}\" font-size=\"10\" fill=\"#a9c4d3\">{tag}</text>",ax+arw+12.0,y-4.0);
+        let cap = sleeve.cap_y + ay;
+        let elbow = sleeve.cuff_y * 0.63 + ay;
+        let hem = sleeve.cuff_y + ay;
+        for (y, tag) in [(cap, "OB"), (elbow, "ELL"), (hem, "AS")] {
+            horizontal(&mut o, ax - 10.0, ax + arw + 10.0, y, "#426879");
+            let _ = writeln!(
+                o,
+                "<text x=\"{:.3}\" y=\"{:.3}\" font-size=\"10\" fill=\"#a9c4d3\">{tag}</text>",
+                ax + arw + 12.0,
+                y - 4.0
+            );
         }
-        point_svg(&mut o,ax+sleeve.grain_x,ay,"Ä0");
-        point_svg(&mut o,ax+sleeve.grain_x,hem,"ÄS");
-        dimension_y(&mut o,ax+arw+31.0,ay,hem,"ÄL",m.sleeve_mm);
-        horizontal(&mut o,ax+8.0,ax+arw-8.0,elbow,"#c48ce0");
+        point_svg(&mut o, ax + sleeve.grain_x, ay, "Ä0");
+        point_svg(&mut o, ax + sleeve.grain_x, hem, "ÄS");
+        dimension_y(&mut o, ax + arw + 31.0, ay, hem, "ÄL", m.sleeve_mm);
+        horizontal(&mut o, ax + 8.0, ax + arw - 8.0, elbow, "#c48ce0");
     }
     let _=writeln!(o,
         "<text x=\"{ax:.3}\" y=\"{:.3}\" fill=\"#bad2df\" font-size=\"11\">AL {:.1} mm · AK {:.1} mm · EW {:.1} mm · Seitennaht Δ {:.1} mm</text>",
@@ -348,7 +446,7 @@ pub fn overlay_svg(
     o.push_str("</g>\n");
     if let Some(index) = src.rfind("</svg>") {
         let mut output = src.to_string();
-        output.insert_str(index,&o);
+        output.insert_str(index, &o);
         Ok(output)
     } else {
         Err("SVG output is incomplete".into())
@@ -368,18 +466,21 @@ pub fn generate(
     allowance_mm: f64,
     density_g_m2: f64,
 ) -> Result<DraftResult, String> {
-    let m = apply(measurements,settings)?;
+    let m = apply(measurements, settings)?;
     let (_sleeve, report) = balance_cap(m, settings.target_cap_ease_mm)?;
     let mut pattern = bodice_v2::export_with_options(
-        m, allowance_mm, density_g_m2,
-        Some(report.cap_height_mm), settings.style.sleeves()
+        m,
+        allowance_mm,
+        density_g_m2,
+        Some(report.cap_height_mm),
+        settings.style.sleeves(),
     )?;
-    pattern.svg=overlay_svg(&pattern.svg,m,&report,settings.style.sleeves())?;
-    Ok(DraftResult{
-        rules:rule_values(m,&report),
+    pattern.svg = overlay_svg(&pattern.svg, m, &report, settings.style.sleeves())?;
+    Ok(DraftResult {
+        rules: rule_values(m, &report),
         pattern,
         report,
-        measurements:m
+        measurements: m,
     })
 }
 
@@ -388,43 +489,65 @@ mod tests {
     use super::*;
     #[test]
     fn fit_and_style_change_actual_bodice_dimensions() {
-        let m=Measurements::default();
-        let base=generate(m,Settings::default(),10.0,210.0).unwrap();
-        let settings=Settings{
-            fit:Fit::Loose, style:Style::Coat,
-            alterations:Alterations{torso_mm:20.0,hip_mm:30.0,hem_mm:40.0,sleeve_mm:25.0},
+        let m = Measurements::default();
+        let base = generate(m, Settings::default(), 10.0, 210.0).unwrap();
+        let settings = Settings {
+            fit: Fit::Loose,
+            style: Style::Coat,
+            alterations: Alterations {
+                torso_mm: 20.0,
+                hip_mm: 30.0,
+                hem_mm: 40.0,
+                sleeve_mm: 25.0,
+            },
             ..Settings::default()
         };
-        let longer=generate(m,settings,10.0,210.0).unwrap();
-        assert!(longer.pattern.cut_area_mm2>base.pattern.cut_area_mm2);
-        assert_eq!(longer.measurements.ease_mm,180.0);
-        assert!((longer.measurements.front_length_mm-480.0).abs()<1e-8);
-        assert!((longer.measurements.hem_below_waist_mm-810.0).abs()<1e-8);
+        let longer = generate(m, settings, 10.0, 210.0).unwrap();
+        assert!(longer.pattern.cut_area_mm2 > base.pattern.cut_area_mm2);
+        assert_eq!(longer.measurements.ease_mm, 180.0);
+        assert!((longer.measurements.front_length_mm - 480.0).abs() < 1e-8);
+        assert!((longer.measurements.hem_below_waist_mm - 810.0).abs() < 1e-8);
     }
     #[test]
     fn sleeve_cap_is_balanced_numerically_to_target() {
-        let out=generate(Measurements::default(),Settings::default(),10.0,210.0).unwrap();
+        let out = generate(Measurements::default(), Settings::default(), 10.0, 210.0).unwrap();
         assert!(out.report.reachable);
-        assert!((out.report.sleeve_ease_mm-22.0).abs()<0.1);
-        assert!(out.report.side_difference_mm<5.0);
+        assert!((out.report.sleeve_ease_mm - 22.0).abs() < 0.1);
+        assert!(out.report.side_difference_mm < 5.0);
         assert!(out.pattern.svg.contains("data-ruleset="));
-        assert_eq!(out.rules.len(),8);
+        assert_eq!(out.rules.len(), 8);
     }
     #[test]
     fn sleeveless_variant_removes_sleeve_panels_and_mass() {
-        let base=generate(Measurements::default(),Settings::default(),10.0,210.0).unwrap();
-        let sleeveless=generate(Measurements::default(),
-            Settings{style:Style::Sleeveless,..Settings::default()},
-            10.0,210.0).unwrap();
-        assert_eq!(sleeveless.pattern.pieces_to_cut,2);
-        assert_eq!(sleeveless.pattern.parts.len(),2);
-        assert!(sleeveless.pattern.cut_area_mm2<base.pattern.cut_area_mm2);
+        let base = generate(Measurements::default(), Settings::default(), 10.0, 210.0).unwrap();
+        let sleeveless = generate(
+            Measurements::default(),
+            Settings {
+                style: Style::Sleeveless,
+                ..Settings::default()
+            },
+            10.0,
+            210.0,
+        )
+        .unwrap();
+        assert_eq!(sleeveless.pattern.pieces_to_cut, 2);
+        assert_eq!(sleeveless.pattern.parts.len(), 2);
+        assert!(sleeveless.pattern.cut_area_mm2 < base.pattern.cut_area_mm2);
     }
     #[test]
     fn alteration_limits_are_enforced() {
-        let bad=Settings{alterations:Alterations{torso_mm:400.0,..Alterations::default()},..Settings::default()};
-        assert!(generate(Measurements::default(),bad,10.0,210.0).is_err());
-        let nan=Settings{target_cap_ease_mm:f64::NAN,..Settings::default()};
-        assert!(generate(Measurements::default(),nan,10.0,210.0).is_err());
+        let bad = Settings {
+            alterations: Alterations {
+                torso_mm: 400.0,
+                ..Alterations::default()
+            },
+            ..Settings::default()
+        };
+        assert!(generate(Measurements::default(), bad, 10.0, 210.0).is_err());
+        let nan = Settings {
+            target_cap_ease_mm: f64::NAN,
+            ..Settings::default()
+        };
+        assert!(generate(Measurements::default(), nan, 10.0, 210.0).is_err());
     }
 }
