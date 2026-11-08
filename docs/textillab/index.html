@@ -6,6 +6,7 @@
   <title>SolidCraft · TextilLab Studio</title>
   <link rel="stylesheet" href="./style.css">
   <script defer src="./browser-engine.js"></script>
+  <script defer src="./pattern-library.js"></script>
   <script defer src="./app.js"></script>
 </head>
 <body>
@@ -13,7 +14,7 @@
   <div class="brand">
     <div class="brandmark">SC</div>
     <div><strong>SolidCraft</strong><span> / TextilLab Studio</span></div>
-    <span class="tag">v0.4 · Preview</span>
+    <span class="tag">v0.6 · Grundschnitte</span>
   </div>
   <div class="topactions">
     <span class="topnote">Online-Demo · Browser-Geometrie</span>
@@ -23,8 +24,38 @@
 </header>
 <main class="workbench">
   <aside class="sidebar">
-    <div class="sectiontitle">TEXTIL-PROJEKT</div>
+    <div class="sectiontitle">GRUNDSCHNITT-BIBLIOTHEK</div>
     <div class="section">
+      <label for="templateType" class="fieldlabel">Vorlage wählen</label>
+      <select id="templateType" class="full">
+        <option value="top">Oberteil / T-Shirt</option>
+        <option value="jacket">Jacke</option>
+        <option value="trousers">Hose</option>
+        <option value="glove">Handschuh</option>
+        <option value="beanie">Mütze</option>
+        <option value="hat">Hut</option>
+        <option value="skirt">Rock</option>
+        <option value="mesh">3D-Modell abwickeln (OBJ)</option>
+      </select>
+      <details class="measure-details" open>
+        <summary>Körpermaße anpassen <span>(cm)</span></summary>
+        <div class="measure-grid"><label class="measure-input"><span>Brustumfang</span><input id="m-chest" type="number" min="1" max="300" step="0.5" value="100" aria-label="Brustumfang in Zentimeter"></label>
+<label class="measure-input"><span>Taille</span><input id="m-waist" type="number" min="1" max="300" step="0.5" value="84" aria-label="Taille in Zentimeter"></label>
+<label class="measure-input"><span>Hüftumfang</span><input id="m-hip" type="number" min="1" max="300" step="0.5" value="102" aria-label="Hüftumfang in Zentimeter"></label>
+<label class="measure-input"><span>Oberteillänge</span><input id="m-back" type="number" min="1" max="300" step="0.5" value="65" aria-label="Oberteillänge in Zentimeter"></label>
+<label class="measure-input"><span>Schulterbreite</span><input id="m-shoulder" type="number" min="1" max="300" step="0.5" value="44" aria-label="Schulterbreite in Zentimeter"></label>
+<label class="measure-input"><span>Armlänge</span><input id="m-sleeve" type="number" min="1" max="300" step="0.5" value="62" aria-label="Armlänge in Zentimeter"></label>
+<label class="measure-input"><span>Schrittlänge</span><input id="m-inseam" type="number" min="1" max="300" step="0.5" value="80" aria-label="Schrittlänge in Zentimeter"></label>
+<label class="measure-input"><span>Kopfumfang</span><input id="m-head" type="number" min="1" max="300" step="0.5" value="57" aria-label="Kopfumfang in Zentimeter"></label>
+<label class="measure-input"><span>Handumfang</span><input id="m-hand" type="number" min="1" max="300" step="0.5" value="22" aria-label="Handumfang in Zentimeter"></label>
+<label class="measure-input"><span>Handlänge</span><input id="m-handLength" type="number" min="1" max="300" step="0.5" value="19" aria-label="Handlänge in Zentimeter"></label>
+<label class="measure-input"><span>Mehrweite</span><input id="m-ease" type="number" min="1" max="300" step="0.5" value="8" aria-label="Mehrweite in Zentimeter"></label></div>
+      </details>
+      <div class="hint">Grundschnitt-Prototypen: Maße und Mehrweite anpassen, Passform mit Probeteil prüfen.</div>
+    </div>
+    
+    <div class="sectiontitle mesh-only">TEXTIL-PROJEKT</div>
+    <div class="section mesh-only">
       <label class="fieldlabel" for="objFile">3D-Oberfläche importieren</label>
       <label class="fileinput" for="objFile">
         <span class="fileicon">↑</span><strong>OBJ-Datei auswählen</strong>
@@ -60,8 +91,8 @@
       </div>
       <div class="hint">Die Materialdaten dienen zur überschlägigen Berechnung und sind nicht zertifiziert.</div>
     </div>
-    <div class="sectiontitle">SCHNITTKANTEN</div>
-    <div class="section">
+    <div class="sectiontitle mesh-only">SCHNITTKANTEN</div>
+    <div class="section mesh-only">
       <p class="sidecopy">Klicke im 3D-Fenster auf eine <strong>innere Netzkante</strong>. Rot bedeutet: Hier wird die Stofffläche getrennt.</p>
       <div class="fieldrow"><span>Aktive Trennkanten</span><strong id="seamCount">0</strong></div>
       <div id="seamList" class="seamlist"><span class="muted">Noch keine</span></div>
@@ -71,8 +102,9 @@
   </aside>
   <div class="panes">
     <section class="pane modelpane">
-      <div class="panelbar"><div><span class="panelid">01</span> 3D-Modell <span class="muted small">· Schnittlinien bearbeiten</span></div><button class="iconbutton" id="viewBtn" title="3D-Ansicht zurücksetzen">↻</button></div>
+      <div class="panelbar"><div><span class="panelid">01</span> <span id="modelPanelTitle">Grundschnitt-Bibliothek</span></div><button class="iconbutton" id="viewBtn" title="3D-Ansicht zurücksetzen">↻</button></div>
       <div class="modelcontainer">
+        <div id="libraryInfo" class="library-overview" aria-live="polite"></div>
         <canvas id="modelCanvas" aria-label="Interaktive 3D-Ansicht mit wählbaren Mesh-Kanten"></canvas>
         <div class="viewhint">Ziehen: Drehen · Mausrad: Zoom · Klick auf Kante: Schnitt setzen</div>
         <div class="axes">3D / MESH</div>
