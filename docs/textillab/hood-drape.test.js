@@ -67,7 +67,7 @@ test("fabric presets, physical strength and gravity change the actual simulated 
 });
 test("no 3D sewing claims if stitching geometry is missing or invalid",()=>{
  const d=hood.draft();
- assert.throws(()=>drape.construct({parts:[{outline:[[0,0],[1,2]]}]}),/Schnittkurve|Schnittkanten/);
+ assert.throws(()=>drape.construct({parts:[{outline:[[0,0],[1,2]]}]}),/Schnittkurve|Schnittkanten|Kapuzenkanten/);
  const broken=structuredClone(d);
  broken.parts[0].edges.face[0][0]+=5;
  assert.throws(()=>drape.construct(broken),/nicht verbunden/);
@@ -106,7 +106,10 @@ test("the editor exposes material settings, full-body and fit diagnostics",()=>{
    "fabricPreset","fabricStiffness","fabricBending","fabricDrape",
    "fabricClearance","hoodDrapeReport","garmentFullBody"]){
   assert.ok(html.includes('id="'+id+'"'),id);
-  assert.ok(app.includes(id),id);
+ }
+ for(const token of ["mannequinMeasurements","fabricSettings","refreshFitting","showDrapeReport",
+   "garmentFullBody","fabricPreset","fabricClearance","hoodDraft"]){
+  assert.ok(app.includes(token),token);
  }
  const ids=[...html.matchAll(/\bid="([^"]+)"/g)].map(x=>x[1]);
  assert.equal(new Set(ids).size,ids.length,"All IDs must be unique");
