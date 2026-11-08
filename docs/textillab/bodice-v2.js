@@ -187,6 +187,8 @@ function createSleeve(m) {
     .line(center-cuffWidth*.5,length)
     .cubic(P(center-cuffWidth*.55,length-85),P(bicepWidth*.06,capHeight+120),P(0,capHeight),20)
     .close();
+  // Avoid a duplicate closure point in the polygon offset input.
+  shape.points.pop();
   return {
     name:"Ärmel – langer Ärmel",count:2,fold:false,
     notes:"2 Ärmel; Armkugellänge/Einhalteweite am Probeteil prüfen",
