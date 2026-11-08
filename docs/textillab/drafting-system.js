@@ -12,7 +12,8 @@ const FITS = Object.freeze({
   regular:{label:"Regular",ease:8},
   comfort:{label:"Bequem",ease:12},
   loose:{label:"Weit",ease:18},
-  oversize:{label:"Oversize",ease:24}
+  oversize:{label:"Oversize",ease:24},
+  custom:{label:"Benutzerdefiniert",ease:null}
 });
 const STYLES = Object.freeze({
   bodice:{label:"Grundschnitt",torso:0,hem:0,sleeves:true},
@@ -78,7 +79,7 @@ function modifyMeasurements(input={},opt={}) {
   const style=STYLES[opt.style||"bodice"];
   const fit=FITS[opt.fit||"regular"];
   const raw={chest:100,waist:84,hip:102,shoulder:44,sleeve:62,ease:8,...B.defaults,...input};
-  raw.ease=fit.ease;
+  if(fit.ease!==null)raw.ease=fit.ease;
   const changes={torso:style.torso,hip:0,hem:style.hem,sleeve:0,...(opt.alterations||{})};
   for(const [zone,amount] of Object.entries(changes)) {
     const n=Number(amount);
