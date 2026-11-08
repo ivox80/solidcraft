@@ -394,7 +394,10 @@ function hoodInput(){
   variant:$("hoodVariant").value,
   profile:$("hoodProfile").value,
   joinMode:$("hoodJoinMode").value,
-  allowedEase:$("hoodAllowedEase").value
+  allowedEase:$("hoodAllowedEase").value,
+  ageYears:$("hoodAgeYears").value,
+  stretchPct:$("hoodStretchPct").value,
+  materialStretchVerified:$("hoodVerifiedMaterial").checked
  };
  for(const key of Object.keys(TextilLabHoodSystem.defaults)){
   if(key==="materialDensity"||key==="seamAllowance")continue;
@@ -495,12 +498,19 @@ function updateCatalog() {
     caution.className = "caution";
     caution.textContent = "Konstruktions-Prototyp: Passform, Rundungen, Nähte und Materialverbrauch vor dem Zuschnitt mit einem Probeteil prüfen.";
     catalog.appendChild(caution);
-    $("errorDetail").textContent = kind==="top"?"Schnittsystem 1.0 · Konzept":"Grundschnitt-Konzept";
+    $("errorDetail").textContent = kind==="hood"?"Nahtlängen rechnerisch geprüft; keine Fertigungsfreigabe":
+      kind==="top"?"Schnittsystem 1.0 · Konzept":"Grundschnitt-Konzept";
     setStatus((kind==="hood"?"Kapuzenkonstruktion und 3D-Vorschau":"Parametrischer Grundschnitt")+" aktualisiert: " + name + " · " + result.pieces + " Teile");
     checkpointDraft();
   } catch (error) {
     state.currentSvg = "";
     latestDraft=null;hoodDraft=null;
+    if(kind==="hood"){
+      const note=$("hoodRuleReport");note.replaceChildren();
+      const errorRow=document.createElement("div");errorRow.className="draft-check warning";
+      errorRow.textContent="Kapuzen-Konstruktion gesperrt: "+error.message;
+      note.append(errorRow);
+    }
     garmentRenderer.clear();
     $("libraryInfo").replaceChildren();
     clearStats();
@@ -735,12 +745,38 @@ $("pantsReferenceFile").addEventListener("change",async event=>{
 });
 
 
-for(const id of ["hoodVariant","hoodProfile","hoodJoinMode","hoodAllowedEase",
+for(const id of ["hoodVariant","hoodProfile","hoodJoinMode","hoodAllowedEase","hoodAgeYears","hoodStretchPct","hoodVerifiedMaterial",
   ...Object.keys(TextilLabHoodSystem.defaults).filter(k=>k!=="materialDensity"&&k!=="seamAllowance").map(k=>"h-"+k)]){
  $(id).addEventListener("input",()=>{
   if($("templateType").value==="hood")updateCatalog();
  });
 }
+
+function updateHoodSafetyFields() {
+  const group=$("hoodProfile").value,mode=$("hoodJoinMode").value;
+  $("hoodChildAgeRow").hidden=group!=="child";
+  $("hoodEaseRow").hidden=mode!=="ease";
+  $("hoodStretchRow").hidden=mode!=="stretch";
+  $("hoodVerifiedRow").hidden=mode!=="stretch";
+}
+$("hoodProfile").addEventListener("change",()=>{
+  // Explicitly load example measurements from the selected, unvalidated
+  // demographic profile. No made-up official HAKA/child grade data.
+  const example=TextilLabHoodSystem.profiles[$("hoodProfile").value].example;
+  for(const key of ["headCirc","backNeck","frontNeck","hoodHeight","hoodDepth"]){
+    const input=$("h-"+key);
+    if(input&&example[key]!=null)input.value=example[key];
+  }
+  if(example.ageYears!=null)$("hoodAgeYears").value=example.ageYears;
+  updateHoodSafetyFields();
+  if($("templateType").value==="hood")updateCatalog();
+});
+$("hoodJoinMode").addEventListener("change",()=>{
+  updateHoodSafetyFields();
+  if($("templateType").value==="hood")updateCatalog();
+});
+updateHoodSafetyFields();
+
 $("hoodVariant").addEventListener("change",()=>{
  if($("hoodVariant").value==="relaxed"){
   $("h-hoodHeight").value="34";$("h-hoodDepth").value="29";

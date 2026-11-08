@@ -213,3 +213,11 @@ html,body{min-width:320px}
  .garment3d-tools button{padding:5px;font-size:9px}
  .library-mode.garment-mode .modelpane{height:330px;min-height:300px!important}
 }
+
+/* Kapuzen-Schnittverarbeitung: unsafe options are hidden until explicitly enabled. */
+[hidden]{display:none!important}
+.hood-verified{display:flex;gap:8px;align-items:flex-start;margin:10px 0;
+  padding:10px;background:#203c48;border:1px solid #466d7d;border-radius:8px;
+  color:#d9edf4;font-size:11px;line-height:1.5}
+.hood-verified input{accent-color:#75d6dc}
+.hood-mode .hood-rule-details .rule-line{font-size:11px}

@@ -10,6 +10,7 @@
   <script defer src="./bodice-v2.js"></script>
   <script defer src="./pants-system.js"></script>
   <script defer src="./ruleset-registry.js"></script>
+  <script defer src="./seam-contracts.js"></script>
   <script defer src="./hood-system.js"></script>
   <script defer src="./garment-3d.js"></script>
   <script defer src="./pattern-library.js"></script>
@@ -102,12 +103,23 @@
     <label class="measure-input"><span>Übertritt</span><input id="h-faceOverlap" type="number" step=".5" min="0" max="5" value="0"></label>
    </div>
   </details>
+  <div class="fieldrow" id="hoodChildAgeRow" hidden>
+    <label for="hoodAgeYears">Alter im Kinderprofil</label>
+    <div class="inputunit"><input id="hoodAgeYears" type="number" min="1" max="14" value="8" step="1"><span>Jahre</span></div>
+  </div>
   <div class="fieldrow gap-top"><label for="hoodJoinMode">Naht-Verbindung</label>
    <select id="hoodJoinMode"><option value="match">Gleich lang</option><option value="stretch">Gezielt dehnen</option><option value="ease">Gezielt einhalten</option></select>
   </div>
-  <div class="fieldrow"><label for="hoodAllowedEase">Zulässige Differenz</label>
+  <div class="fieldrow" id="hoodEaseRow" hidden><label for="hoodAllowedEase">Einhalteweite / Halbkapuze</label>
    <div class="inputunit"><input id="hoodAllowedEase" type="number" value=".5" step=".1" min="0" max="4"><span>cm</span></div>
   </div>
+  <div class="fieldrow" id="hoodStretchRow" hidden>
+    <label for="hoodStretchPct">Materialdehnung</label>
+    <div class="inputunit"><input id="hoodStretchPct" type="number" min=".1" max="12" value="4" step=".5"><span>%</span></div>
+  </div>
+  <label class="hood-verified" id="hoodVerifiedRow" hidden>
+    <input id="hoodVerifiedMaterial" type="checkbox"> Dehnung am verwendeten Stoff tatsächlich geprüft
+  </label>
  </div>
  <div class="sectiontitle">KONSTRUKTIONSREGELN UND NAHTKONTROLLE</div>
  <div class="section" id="hoodRuleReport" aria-live="polite"></div>
