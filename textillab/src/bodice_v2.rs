@@ -524,7 +524,7 @@ mod tests {
         }
         assert_eq!(result.pieces_to_cut, 4);
         assert_eq!(result.parts.len(), 3);
-        assert!(result.svg.contains("data-sleeves=\\\"2\\\""));
+        assert!(result.svg.contains(r#"data-sleeves="2""#));
         assert!(result.svg.contains("#14202e"));
         assert!(result.cut_area_mm2 > result.sewn_area_mm2);
     }
