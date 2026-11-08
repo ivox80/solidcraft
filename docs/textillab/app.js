@@ -502,6 +502,7 @@ $("templateType").addEventListener("change", () => {
 });
 for (const key of [...Object.keys(TextilLabPatternLibrary.defaults), ...Object.keys(TextilLabBodiceV2.defaults)]) {
   $("m-" + key).addEventListener("input", () => {
+    if(key==="ease")$("draftFit").value="custom";
     if ($("templateType").value !== "mesh") {updateCatalog();checkpointDraft();}
   });
 }
@@ -520,9 +521,6 @@ for(const id of ["draftFit","draftStyle","draftEase",...Object.keys(TextilLabDra
 for(const id of Object.keys(TextilLabDraftingSystem.layers).map(k=>"layer-"+k)) {
   $(id).addEventListener("change",draftChanged);
 }
-$("m-ease").addEventListener("input",()=>{
-  $("draftFit").value="custom";
-});
 $("draftUndo").addEventListener("click",()=>{
   if(history.index<=0)return;
   history.index--;
