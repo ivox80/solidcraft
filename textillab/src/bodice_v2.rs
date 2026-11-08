@@ -213,7 +213,11 @@ fn render_panel(
     } else {
         0.0
     };
-    let tx = if mirrored { horizontal_offset + cx } else { horizontal_offset };
+    let tx = if mirrored {
+        horizontal_offset + cx
+    } else {
+        horizontal_offset
+    };
     let flip = if mirrored { " scale(-1 1)" } else { "" };
     let _ = writeln!(s, "<g transform=\"translate({tx:0.3} 0){flip}\">");
     let _=writeln!(s,"<path d=\"{}\" fill=\"#cb6953\" fill-opacity=\"0.04\" stroke=\"#a85145\" stroke-width=\"1.8\" stroke-linejoin=\"round\"/>",panel.svg_path);
