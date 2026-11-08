@@ -1,3 +1,13 @@
+# SolidCraft Skeleton AI V0.7 – Rust-Editor mit FEM und Optimierung
+
+**Neu:** 3D-Balken-FEM (6 Freiheitsgrade pro Knoten), Lasten/Momente, Lagerungen, FEM-Verformungsanzeige sowie FEM-geprüfte Querschnittsoptimierung bei Materialbudget. Details siehe [FEM_OPTIMIERUNG_DE.md](FEM_OPTIMIERUNG_DE.md).
+
+Start: `cargo run --release --bin skeleton-editor -- --input examples/force_optimization_demo.json`, danach `http://127.0.0.1:8765`.
+
+Die generierte Oberfläche ist ein SDF-Dreiecksnetz, keine B-Rep. Die FEM bewertet ein Balken-Ersatzmodell, nicht die exakte lokale Spannung im fertigen Körper. Die Optimierung nutzt derzeit klassische FEM und Optimality Criteria; das separate Tiny-Ranker-Netz ist noch nicht in der FEM-Optimierung aktiv.
+
+---
+
 # SolidCraft Skeleton AI — native Rust module V0.5
 
 Port of the **V0.4 multi-station organic geometry module** into an independent Rust crate with no Python dependency. Includes CPU inference for the previously trained **1,624-parameter V0.4 TinyProfileRanker**.
