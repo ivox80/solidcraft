@@ -47,7 +47,7 @@ select.full,.btn.full{width:100%}.inputunit{display:flex;align-items:center;gap:
 /* VT / RT technical bodice draft */
 .top-only{display:none}
 .bodice-v2-mode .top-only{display:block}
-.bodice-v2-mode .previewcontainer{background:#d9c4a5}
+.bodice-v2-mode .previewcontainer{background:#14202e}
 .bodice-v2-mode .preview{padding:6px}
-.bodice-v2-mode #preview svg{box-shadow:0 6px 34px #07141e42;border:1px solid #857665}
+.bodice-v2-mode #preview svg{box-shadow:0 6px 34px #07141e65;border:1px solid #2c485b}
 .bodice-v2-mode .legend{background:#293d4ade}
