@@ -234,7 +234,7 @@ function techPiece(piece,dx,mirror,allowance){
 
 function techSleeve(piece,dx,dy,allowance) {
   const out=[],contour=convexLikeOffset(piece.outline,allowance);
-  out.push('<g transform="translate('+fmt(dx)+' '+fmt(dy)+')">');
+  out.push('<g transform="translate('+fmt(dx)+' '+fmt(dy)+')" data-piece-id="AR">');
   out.push('<path d="'+piece.svgPath+'" fill="#264554" fill-opacity=".22" stroke="#75d3d6" stroke-dasharray="4 2" stroke-width="1.4" stroke-linejoin="round"/>');
   if(allowance>0)out.push(svgPoly(contour,"#efa16f",'stroke-width="1.6" stroke-linejoin="round"'));
   const center=piece.grain[0],cap=piece.points.bicepY,hem=piece.points.hemY;
