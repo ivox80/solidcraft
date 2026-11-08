@@ -506,6 +506,12 @@ function updateCatalog() {
     state.currentSvg = "";
     latestDraft=null;
     currentHoodResult=null;
+    if(kind==="hood"){
+      const list=$("hoodSeamReport");list.replaceChildren();
+      const warning=document.createElement("div");warning.className="hood-check fail";
+      warning.textContent="Konstruktion gesperrt: "+error.message;
+      list.appendChild(warning);
+    }
     clearStats();
     $("preview").replaceChildren();
     const label = document.createElement("div"); label.className = "placeholder";
