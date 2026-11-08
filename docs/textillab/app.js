@@ -4,6 +4,9 @@
 const $ = (id) => document.getElementById(id);
 const canvas = $("modelCanvas");
 const ctx = canvas.getContext("2d");
+const garmentRenderer=TextilLabGarment3D.createRenderer($("garmentCanvas"));
+let hoodDraft=null;
+
 const state = {
   source: "", name: "", vertices: [], faces: [], edges: [],
   seams: new Set(), selectedFace: -1, hoveredEdge: null,
@@ -385,25 +388,81 @@ function createPieceThumbnail(part) {
   return svg;
 }
 
+
+function hoodInput(){
+ const values={
+  variant:$("hoodVariant").value,
+  profile:$("hoodProfile").value,
+  joinMode:$("hoodJoinMode").value,
+  allowedEase:$("hoodAllowedEase").value
+ };
+ for(const key of Object.keys(TextilLabHoodSystem.defaults)){
+  if(key==="materialDensity"||key==="seamAllowance")continue;
+  const el=$("h-"+key);if(el)values[key]=el.value;
+ }
+ return values;
+}
+function hoodCheckReport(result){
+ const report=$("hoodRuleReport");report.replaceChildren();
+ const heading=document.createElement("div");
+ heading.className="draft-check"+(result.checks.some(a=>a.status==="fail")?" warning":"");
+ heading.textContent="Halsansatz: "+(result.checks.every(x=>x.status==="ok")?"Nahtlängen stimmen":"Nahtlängen prüfen");
+ report.appendChild(heading);
+ for(const line of result.checks){
+  const div=document.createElement("div");div.className="rule-line";
+  const title=document.createElement("strong");title.textContent=line.name;
+  const val=document.createElement("span");
+  val.textContent=(line.deltaMm>=0?"+":"")+line.deltaMm.toFixed(2)+" mm · "+(line.status==="ok"?"OK":"FEHLER");
+  val.style.color=line.status==="ok"?"#8de3b5":"#ffad9e";
+  div.append(title,val);report.append(div);
+ }
+ const rules=document.createElement("details");rules.className="hood-rule-details";
+ const summary=document.createElement("summary");summary.textContent="Öffentlich dokumentierte Beziehungen / Konstruktion";
+ rules.append(summary);
+ for(const rule of result.rules){
+  const row=document.createElement("div");row.className="rule-line";
+  const label=document.createElement("strong");label.textContent=rule.id+" · "+rule.label;
+  const form=document.createElement("span");form.textContent=rule.formula;
+  row.append(label,form);rules.append(row);
+ }
+ report.append(rules);
+ for(const flag of result.flags){
+  const note=document.createElement("div");note.className="v1-help";
+  note.textContent="• "+flag;report.appendChild(note);
+ }
+ $("hoodSourceNote").textContent=
+  "Regelbezug: Müller & Sohn (öffentlich beschriebene DOB-Kapuzenmaße). "+
+  "Konstruktion "+(result.sourceStatus)+"; keine zugesicherte Passform.";
+}
+
 function updateCatalog() {
   const kind = $("templateType").value;
   const name = TextilLabPatternLibrary.types.find(x => x[0] === kind)?.[1] || kind;
   document.body.classList.add("library-mode");
   document.body.classList.toggle("bodice-v2-mode", kind === "top");
   document.body.classList.toggle("pants-mode", kind === "trousers");
+  document.body.classList.toggle("hood-mode",kind==="hood");
+  document.body.classList.add("garment-mode");
   $("modelPanelTitle").textContent = "Grundschnitt · " + name;
   try {
     const result = kind === "top"
       ? TextilLabDraftingSystem.generate(catalogMeasurements(), draftOptions())
       : kind === "trousers"
         ? TextilLabPantsSystem.render(catalogMeasurements(), $("allowance").value, $("density").value)
-        : TextilLabPatternLibrary.render(kind, catalogMeasurements(), $("allowance").value, $("density").value);
+        : kind === "hood"
+          ? TextilLabHoodSystem.render(hoodInput(),$("allowance").value,$("density").value)
+          : TextilLabPatternLibrary.render(kind, catalogMeasurements(), $("allowance").value, $("density").value);
     latestDraft=kind==="top"?result:null;
     if(kind==="top")showDraftReport(result);
     else $("draftRuleReport").replaceChildren();
     currentPantsDraft=kind==="trousers"?result:null;
     if(kind==="trousers")showPantsReport(result);
     else $("pantsRuleReport").replaceChildren();
+    hoodDraft=kind==="hood"?result:null;
+    if(kind==="hood")hoodCheckReport(result);
+    else $("hoodRuleReport").replaceChildren();
+    garmentRenderer.setModel(kind,kind==="hood"?result.model:catalogMeasurements());
+    requestAnimationFrame(garmentRenderer.draw);
     state.currentSvg = result.svg;
     $("preview").innerHTML = result.svg;
     $("pieces").textContent = String(result.pieces);
@@ -437,11 +496,11 @@ function updateCatalog() {
     caution.textContent = "Konstruktions-Prototyp: Passform, Rundungen, Nähte und Materialverbrauch vor dem Zuschnitt mit einem Probeteil prüfen.";
     catalog.appendChild(caution);
     $("errorDetail").textContent = kind==="top"?"Schnittsystem 1.0 · Konzept":"Grundschnitt-Konzept";
-    setStatus("Parametrischer Grundschnitt aktualisiert: " + name + " · " + result.pieces + " Teile");
+    setStatus((kind==="hood"?"Kapuzenkonstruktion und 3D-Vorschau":"Parametrischer Grundschnitt")+" aktualisiert: " + name + " · " + result.pieces + " Teile");
     checkpointDraft();
   } catch (error) {
     state.currentSvg = "";
-    latestDraft=null;
+    latestDraft=null;hoodDraft=null;
     clearStats();
     $("preview").replaceChildren();
     const label = document.createElement("div"); label.className = "placeholder";
@@ -456,7 +515,7 @@ async function updatePreview() {
     updateCatalog();
     return;
   }
-  document.body.classList.remove("library-mode", "bodice-v2-mode", "pants-mode");
+  document.body.classList.remove("library-mode", "bodice-v2-mode", "pants-mode", "hood-mode","garment-mode");
   $("modelPanelTitle").textContent = "3D-Modell · Schnittlinien bearbeiten";
   if (!state.source) return;
   $("errorDetail").textContent = "";
@@ -672,6 +731,47 @@ $("pantsReferenceFile").addEventListener("change",async event=>{
   }
   event.target.value="";
 });
+
+
+for(const id of ["hoodVariant","hoodProfile","hoodJoinMode","hoodAllowedEase",
+  ...Object.keys(TextilLabHoodSystem.defaults).filter(k=>k!=="materialDensity"&&k!=="seamAllowance").map(k=>"h-"+k)]){
+ $(id).addEventListener("input",()=>{
+  if($("templateType").value==="hood")updateCatalog();
+ });
+}
+$("hoodVariant").addEventListener("change",()=>{
+ if($("hoodVariant").value==="relaxed"){
+  $("h-hoodHeight").value="34";$("h-hoodDepth").value="29";
+ }else if($("hoodVariant").value==="dartless"){
+  $("h-hoodHeight").value="35";$("h-hoodDepth").value="31";
+  $("h-faceOverlap").value="2";$("h-dartIntake").value="0";
+ }else{
+  $("h-hoodHeight").value="32";$("h-hoodDepth").value="27";
+  $("h-faceOverlap").value="0";$("h-dartIntake").value="3.5";
+ }
+ if($("templateType").value==="hood")updateCatalog();
+});
+$("garmentWire").addEventListener("click",e=>{
+ const on=e.currentTarget.getAttribute("aria-pressed")!=="true";
+ e.currentTarget.setAttribute("aria-pressed",String(on));
+ e.currentTarget.classList.toggle("is-active",on);
+ garmentRenderer.setOptions({wire:on});
+});
+$("garmentBody").addEventListener("click",e=>{
+ const on=e.currentTarget.getAttribute("aria-pressed")!=="true";
+ e.currentTarget.setAttribute("aria-pressed",String(on));
+ e.currentTarget.classList.toggle("is-active",on);
+ garmentRenderer.setOptions({body:on});
+});
+$("garmentReset").addEventListener("click",garmentRenderer.reset);
+$("garmentObj").addEventListener("click",()=>{
+ if($("templateType").value==="mesh")return;
+ const src=garmentRenderer.obj();
+ downloadDraft("textillab-"+$("templateType").value+"-schematisch.obj",src,"text/plain");
+ setStatus("Schematisches 3D-Modell exportiert (keine fertige Stoffsimulation).");
+});
+new ResizeObserver(()=>{if($("templateType").value!=="mesh")garmentRenderer.draw();})
+  .observe($("garmentCanvas"));
 
 document.body.classList.add("library-mode");
 $("draftUndo").disabled=true;
