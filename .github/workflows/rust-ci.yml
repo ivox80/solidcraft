@@ -36,6 +36,11 @@ jobs:
         run: cargo clippy --all-targets --all-features -- -D warnings
       - name: Studio JavaScript syntax
         run: node --check studio/app.js
+      - name: Browser demo syntax and regression tests
+        run: |
+          node --check ../docs/textillab/app.js
+          node --check ../docs/textillab/browser-engine.js
+          node --test ../docs/textillab/browser-engine.test.js
       - name: Unit tests
         run: cargo test --all-targets --all-features --verbose
       - name: Release build
