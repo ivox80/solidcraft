@@ -270,52 +270,6 @@ fn sleeve(m: Measurements, coat: bool) -> Vec<Point> {
     ]);
     a
 }
-fn trousers(m: Measurements) -> Vec<Piece> {
-    let rise = (m.inseam_mm * 0.33).max(210.0);
-    let length = m.inseam_mm + rise;
-    let w = (m.hip_mm + m.ease_mm) / 4.0;
-    let hem = w * 0.64;
-    let front = vec![
-        pt(0.0, 18.0),
-        pt(w * 0.91, 0.0),
-        pt(w + 7.0, rise * 0.48),
-        pt(w + 15.0, rise),
-        pt(w * 0.76 + hem * 0.17, length),
-        pt(w * 0.76 - hem * 0.83, length),
-        pt(w * 0.25, rise + 65.0),
-        pt(-w * 0.15, rise),
-        pt(-w * 0.03, rise * 0.4),
-    ];
-    let back = vec![
-        pt(0.0, 10.0),
-        pt(w * 1.08, -35.0),
-        pt(w * 1.15, rise * 0.45),
-        pt(w * 1.25, rise),
-        pt(w * 0.81 + hem * 0.30, length),
-        pt(w * 0.81 - hem * 0.74, length),
-        pt(w * 0.19, rise + 64.0),
-        pt(-w * 0.29, rise),
-        pt(-w * 0.03, rise * 0.4),
-    ];
-    let band = (m.waist_mm + m.ease_mm) * 0.55;
-    vec![
-        piece(
-            "Vorderhose",
-            front,
-            2,
-            false,
-            "Crotch shaping and darts require fitting",
-        ),
-        piece("Hinterhose", back, 2, false, "Back rise needs fitting"),
-        piece(
-            "Bund",
-            vec![pt(0.0, 0.0), pt(band, 0.0), pt(band, 90.0), pt(0.0, 90.0)],
-            2,
-            false,
-            "Straight draft waistband",
-        ),
-    ]
-}
 fn glove(m: Measurements) -> Vec<Piece> {
     let width = m.hand_mm * 0.55;
     let h = m.hand_length_mm;
@@ -519,7 +473,11 @@ pub fn draft(kind: Garment, m: Measurements) -> Result<Vec<Piece>, String> {
                 "Placeholder straight collar",
             ),
         ],
-        Garment::Trousers => trousers(m),
+        Garment::Trousers => crate::pants_rules::draft(crate::pants_rules::PantsMeasures::from_general(m))?
+            .panels
+            .into_iter()
+            .map(|p| p.piece)
+            .collect(),
         Garment::Glove => glove(m),
         Garment::Beanie => beanie(m),
         Garment::Hat => hat(m),
@@ -615,6 +573,9 @@ pub fn export_svg(
     }
     if kind == Garment::Top {
         return crate::bodice_v2::export(m, seam_mm, density_g_m2);
+    }
+    if kind == Garment::Trousers {
+        return crate::pants_rules::export(crate::pants_rules::PantsMeasures::from_general(m), seam_mm, density_g_m2);
     }
     let parts = draft(kind, m)?;
     let mut shapes = String::new();
