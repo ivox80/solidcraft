@@ -112,7 +112,8 @@ function createPiece(side,m){
   const waistY=475;
   const topY=waistY-(front?m.frontLength:m.backWaist);
   const bustY=waistY-m.frontLength+m.bustHeight;
-  const armY=topY+m.armholeDepth;
+  // Both underarms share one horizontal balance line despite differing front/back lengths.
+  const armY=475-m.frontLength+m.armholeDepth;
   const hipY=waistY+m.waistToHip;
   const hemY=waistY+m.hemBelowWaist;
   const chestW=(m.chest+m.ease)/4*(front?1.008:.992);
@@ -135,7 +136,7 @@ function createPiece(side,m){
     .cubic(P(neckW*.28,topY+neckD),P(neckW*.66,topY+neckD*.03),shoulderStart,24)
     .line(...shoulderEnd)
     .cubic(
-      P(shoulderEndX+8,topY+slope+armY*.12),
+      P(shoulderEndX+8,topY+slope+(armY-topY-slope)*.12),
       P(chestW-47,armY-12),underarm,30
     )
     .cubic(P(chestW+1,armY+24),P(chestW+2,bustY-15),burst,12)
