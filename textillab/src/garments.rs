@@ -71,6 +71,8 @@ pub struct Measurements {
     pub waist_to_hip_mm: f64,
     pub hem_below_waist_mm: f64,
     pub shoulder_slope_mm: f64,
+    pub upper_arm_mm: f64,
+    pub wrist_mm: f64,
 }
 impl Default for Measurements {
     fn default() -> Self {
@@ -95,6 +97,8 @@ impl Default for Measurements {
             waist_to_hip_mm: 200.0,
             hem_below_waist_mm: 290.0,
             shoulder_slope_mm: 30.0,
+            upper_arm_mm: 340.0,
+            wrist_mm: 190.0,
         }
     }
 }
@@ -125,6 +129,8 @@ impl Measurements {
             "waistToHip" => self.waist_to_hip_mm = mm,
             "hemBelowWaist" => self.hem_below_waist_mm = mm,
             "shoulderSlope" => self.shoulder_slope_mm = mm,
+            "upperArm" => self.upper_arm_mm = mm,
+            "wrist" => self.wrist_mm = mm,
             _ => return Err(format!("Unknown measurement: {key}")),
         }
         Ok(())
@@ -151,6 +157,8 @@ impl Measurements {
             self.waist_to_hip_mm,
             self.hem_below_waist_mm,
             self.shoulder_slope_mm,
+            self.upper_arm_mm,
+            self.wrist_mm,
         ];
         if all
             .iter()
@@ -475,10 +483,7 @@ fn skirt(m: Measurements) -> Vec<Piece> {
 pub fn draft(kind: Garment, m: Measurements) -> Result<Vec<Piece>, String> {
     m.validate()?;
     Ok(match kind {
-        Garment::Top => crate::bodice_v2::draft(m)?
-            .into_iter()
-            .map(|b| b.piece)
-            .collect(),
+        Garment::Top => crate::bodice_v2::draft_parts(m)?,
         Garment::Jacket => vec![
             piece(
                 "Jacke vorne",
