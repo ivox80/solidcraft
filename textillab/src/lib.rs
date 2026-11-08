@@ -291,3 +291,6 @@ pub mod studio_patterns;
 
 /// Measurement-based clothing starter blocks (concept drafts, not fitted patterns).
 pub mod garments;
+
+/// Detailed front/back VT/RT bodice prototype with darts and technical drawing.
+pub mod bodice_v2;
