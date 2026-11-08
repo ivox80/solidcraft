@@ -6,6 +6,7 @@
 (function(root){
 "use strict";
 const PI=Math.PI,clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+const HoodDrape=(typeof module!=="undefined"&&module.exports)?require("./hood-drape.js"):root.TextilLabHoodDrape;
 const createMesh=(name,color,body=false)=>({name,color,body,vertices:[],faces:[],edgeGroups:[]});
 function v(m,x,y,z){m.vertices.push([x,y,z]);return m.vertices.length-1}
 function tri(m,a,b,c){m.faces.push([a,b,c])}
@@ -129,7 +130,8 @@ function bodyModel(type,data={}){
 }
 function vtx(mesh,x,y,z){return v(mesh,x,y,z)}
 function modelFor(type,data={}){
- if(type==="hood")return hoodModel(data);
+ if(type==="hood")return data.hoodDraft?.parts?.[0]?.edges?
+   HoodDrape.construct(data.hoodDraft,data.mannequin,data.fabric).meshes:hoodModel(data);
  if(type==="top"||type==="jacket"){
   const chest=(Number(data.chest)||100)*10,waist=(Number(data.waist)||84)*10,
     hip=(Number(data.hip)||102)*10,armLength=(Number(data.sleeve)||62)*10;
@@ -170,8 +172,8 @@ function exportOBJ(meshes){
 }
 function createRenderer(canvas){
  const ctx=canvas.getContext("2d");if(!ctx)throw Error("3D Canvas nicht verfügbar");
- const state={yaw:-.55,pitch:-.18,zoom:1,wire:false,body:true,
-  meshes:[],drag:null,model:null};
+ const state={yaw:-.55,pitch:-.18,zoom:1,wire:false,body:true,fullBody:false,
+  meshes:[],drag:null,model:null,report:null,clothMaterial:null};
  function rotate(pt){
   const cy=Math.cos(state.yaw),sy=Math.sin(state.yaw),
    cp=Math.cos(state.pitch),sp=Math.sin(state.pitch);
@@ -190,7 +192,7 @@ function createRenderer(canvas){
   ctx.strokeStyle="#39566b38";ctx.lineWidth=1;
   for(let x=12;x<w;x+=33){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke()}
   for(let y=12;y<h;y+=33){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke()}
-  const meshes=state.meshes.filter(m=>!m.body||state.body);
+  const meshes=state.meshes.filter(m=>(!m.body||state.body)&&(!m.fullBodyOnly||state.fullBody));
   if(!meshes.length)return;
   const points=meshes.flatMap(m=>m.vertices.map(rotate));
   const ext=Math.max(200,...points.map(p=>Math.abs(p[0])*2.4),...points.map(p=>Math.abs(p[1])*2.0));
@@ -226,7 +228,19 @@ function createRenderer(canvas){
     group.indices.forEach((id,i)=>i?ctx.lineTo(pts[id][0],pts[id][1]):ctx.moveTo(pts[id][0],pts[id][1]));ctx.stroke();
    }
   }
-  ctx.fillStyle="#b2cfda";ctx.font="11px Segoe UI, Arial";ctx.fillText("3D · schematische Drapierung",12,23);
+  ctx.fillStyle="#b2cfda";ctx.font="11px Segoe UI, Arial";
+  ctx.fillText(state.report?"3D · vernähte Schnittflächen · PBD-Prototyp":
+    "3D · schematische Drapierung",12,23);
+  if(state.report){
+    const report=state.report;
+    ctx.fillStyle=report.fitRisk==="HIGH_STRAIN"?"#f8b59c":"#a5d6cb";
+    ctx.font="10px Segoe UI, Arial";
+    ctx.fillText("Nahtspalt "+report.centerSeamGapMm.toFixed(2)+
+      " mm · Kantenverzug "+report.rmsEdgeStrainPct.toFixed(1)+" % RMS",12,40);
+    if(report.fitRisk==="HIGH_STRAIN"){
+      ctx.fillStyle="#f5ae92";ctx.fillText("HOHER VERZUG · PASSFORM NICHT FREIGEGEBEN",12,56);
+    }
+  }
   ctx.fillStyle="#7a9cab";ctx.font="10px Segoe UI, Arial";ctx.fillText("Ziehen: drehen · Rad: zoomen",12,h-14);
  }
  canvas.addEventListener("pointerdown",e=>{
@@ -244,10 +258,23 @@ function createRenderer(canvas){
  canvas.addEventListener("wheel",e=>{
   e.preventDefault();state.zoom=clamp(state.zoom*(e.deltaY<0?1.11:.9),.4,3);redraw();
  },{passive:false});
- return {setModel(type,data){state.model={type,data};state.meshes=modelFor(type,data);redraw()},
-  clear(){state.model=null;state.meshes=[];redraw()},
-  setOptions(options){if("wire"in options)state.wire=!!options.wire;
-   if("body"in options)state.body=!!options.body;redraw()},
+ return {setModel(type,data){
+    state.model={type,data};
+    if(type==="hood"&&data.hoodDraft?.parts?.[0]?.edges){
+      const sewn=HoodDrape.construct(data.hoodDraft,data.mannequin,data.fabric);
+      state.meshes=sewn.meshes;state.report=sewn.metrics;state.clothMaterial=sewn.material;
+    }else{
+      state.meshes=modelFor(type,data);state.report=null;state.clothMaterial=null;
+    }
+    redraw();return state.report;
+  },
+  clear(){state.model=null;state.meshes=[];state.report=null;redraw()},
+  setOptions(options){
+    if("wire"in options)state.wire=!!options.wire;
+    if("body"in options)state.body=!!options.body;
+    if("fullBody"in options)state.fullBody=!!options.fullBody;
+    redraw();
+  },
   reset(){state.yaw=-.55;state.pitch=-.18;state.zoom=1;redraw()},
   draw:redraw,obj(){return exportOBJ(state.meshes)},state};
 }
