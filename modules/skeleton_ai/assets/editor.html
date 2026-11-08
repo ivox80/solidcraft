@@ -23,28 +23,39 @@ button,input,select{font:inherit} button{cursor:pointer;color:var(--text);border
 <div id="layout"><aside id="left">
 <div class="section"><h3>Struktur</h3><div class="small" id="counts">–</div><div class="btnrow" style="margin-top:10px"><button id="addNode">+ Knoten</button><button id="connect">Verbinden</button></div><div class="btnrow" style="margin-top:6px"><button class="critical" id="remove">Auswahl löschen</button></div><p class="small">Knoten anklicken und ziehen. Verbinden: ersten Knoten auswählen, dann auf den Zielknoten klicken.</p></div>
 <div class="section"><h3>Verschieben</h3><div class="field"><label for="plane">Arbeitsebene</label><select id="plane"><option value="xy">XY – Z bleibt gleich</option><option value="xz">XZ – Y bleibt gleich</option><option value="yz">YZ – X bleibt gleich</option></select></div><p class="small">Auf freie Fläche ziehen: Ansicht drehen. Mausrad: Zoom.</p></div>
-<div class="section"><h3>Oberfläche</h3><div class="field"><label>Vorschau-Auflösung <span id="resLabel">34</span></label><input id="resolution" type="range" min="18" max="72" step="2" value="34"></div><label class="checkline"><input type="checkbox" id="showMesh" checked>Organische Netzgeometrie</label><label class="checkline"><input type="checkbox" id="showSkeleton" checked>3D-Skelett und Stationen</label><div class="small" id="meshinfo" style="margin-top:8px">Noch kein Netz berechnet</div></div>
+<div class="section"><h3>Oberfläche</h3><div class="field"><label>Vorschau-Auflösung <span id="resLabel">34</span></label><input id="resolution" type="range" min="18" max="72" step="2" value="34"></div><label class="checkline"><input type="checkbox" id="showMesh" checked>Organische Netzgeometrie</label><label class="checkline"><input type="checkbox" id="showSkeleton" checked>3D-Skelett und Stationen</label><label class="checkline"><input type="checkbox" id="showDef" checked>FEM-Verformung (überhöht)</label><div class="small" id="meshinfo" style="margin-top:8px">Noch kein Netz berechnet</div></div>
+<div class="section"><h3>Kräfte & Lagerungen</h3>
+<p class="small">Knoten auswählen, dann Last oder Einspannung setzen. Den orangefarbenen Kraftpfeil kannst du im 3D-Fenster ziehen.</p>
+<div class="btnrow"><button id="addSupport">Knoten lagern</button><button id="addForce">Kraft anlegen</button></div>
+<div class="btnrow" style="margin-top:7px"><button id="analyze">FEM berechnen</button><button class="accent" id="optimize">Struktur optimieren</button></div>
+<div class="field"><label>Materialvolumen Ziel: <span id="volumeLabel">100</span> %</label><input id="volumeFraction" type="range" min="60" max="110" value="100" step="5"></div>
+<div class="small" id="feminfo">Noch keine Berechnung. Die FEM verwendet ein lineares 3D-Balkenmodell, keine Kontinuums-Spannungsanalyse.</div></div>
 <div class="section"><h3>Dateien</h3><div class="btnrow"><button id="import">JSON öffnen</button><button id="json">JSON speichern</button></div><div class="btnrow" style="margin-top:6px"><button id="save">In Projektordner</button><button id="stl">STL</button><button id="obj">OBJ</button></div><input type="file" id="fileInput" accept=".json,application/json" hidden><p class="small">STL/OBJ sind Dreiecksnetze, noch keine B-Rep-Körper. Das JSON enthält die bearbeitbaren Stationen.</p></div>
 </aside>
 <main id="viewport"><canvas id="scene"></canvas><div id="topinfo">3D-Ansicht · Knoten wählen oder Verbindung anklicken</div><div id="overlay">Blau: Skelett · Orange: Auswahl · Grün: Stationen | Arbeitsebene über die linke Leiste</div></main>
 <aside id="right"><h3>Eigenschaften</h3><div id="inspector"><p class="small">Wähle einen Knoten oder eine Verbindung im 3D-Fenster.</p></div></aside></div>
-<div id="footer"><span>Lokaler Rust-Geometriekern</span><span id="coord">X – Y – Z –</span><span class="spacer"></span><span id="footerhint">V0.6 Editor-Prototyp · Änderungen werden im Arbeitsspeicher gehalten</span></div>
+<div id="footer"><span>Lokaler Rust-Geometriekern</span><span id="coord">X – Y – Z –</span><span class="spacer"></span><span id="footerhint">V0.7 Rust-FEM · Orange Kraft, Grün Lager, Magenta Verformung (überhöht)</span></div>
 </div>
 <script>
 (() => { 'use strict';
 const $=id=>document.getElementById(id);
 const canvas=$('scene'),ctx=canvas.getContext('2d');
 const profiles=[['circle','Vollkreis'],['ellipse','Ellipse'],['rectangle','Rechteck'],['rounded_rectangle','Abgerundetes Rechteck'],['hexagon','Sechseck'],['triangle','Dreieck'],['tube','Rundrohr'],['i_beam','Doppel-T']];
-let doc=null,selection=null,stationIndex=0,connectFrom=null,mesh=null,meshDirty=true,loading=false,drag=null,undo=[],redo=[],updateTimer=null,view={yaw:-0.65,pitch:0.57,zoom:250,center:[0,0,0]},res=34;
+let doc=null,selection=null,stationIndex=0,connectFrom=null,mesh=null,meshDirty=true,loading=false,drag=null,undo=[],redo=[],updateTimer=null,view={yaw:-0.65,pitch:0.57,zoom:250,center:[0,0,0]},res=34,femReport=null;
 function status(s,bad=false){$('status').textContent=s;$('status').className=bad?'bad':'';}
 const clone=x=>JSON.parse(JSON.stringify(x));
 function backup(before){if(JSON.stringify(before)!==JSON.stringify(doc)){undo.push(JSON.stringify(before));if(undo.length>80)undo.shift();redo=[];updated();}}
 function mutate(fn){const before=clone(doc);fn();backup(before);refreshInspector();render();}
-function updated(){meshDirty=true;mesh=null;syncPending=true;$('meshinfo').textContent='Geometrie geändert – Vorschau ausstehend';clearTimeout(updateTimer);updateTimer=setTimeout(()=>syncAndMesh(),400);refreshCounters();}
+function updated(){meshDirty=true;mesh=null;femReport=null;syncPending=true;$('meshinfo').textContent='Geometrie geändert – Vorschau ausstehend';clearTimeout(updateTimer);updateTimer=setTimeout(()=>syncAndMesh(),400);refreshCounters();}
 let syncPending=false;
 async function api(path,opts){const resp=await fetch(path,opts);if(!resp.ok){const data=await resp.text();let error=data;try{error=JSON.parse(data).error||data}catch{}throw new Error(error)}return resp;}
 async function sync(){if(!syncPending)return;const r=await api('/api/state',{method:'POST',headers:{'Content-Type':'application/json','X-SolidCraft-Editor':'1'},body:JSON.stringify(doc)});await r.json();syncPending=false;}
-async function syncAndMesh(){if(!doc||loading)return;loading=true;status('Rust-Netz wird aktualisiert …');try{await sync();const response=await api('/api/mesh?resolution='+res);const result=await response.json();mesh=result;meshDirty=false;$('meshinfo').textContent=result.triangles.toLocaleString('de-DE')+' Dreiecke · '+(result.watertight?'geschlossene Oberfläche':'Netzprüfung erforderlich');status('3D-Geometrie aktualisiert');render();}catch(e){mesh=null;status('Fehler: '+e.message,true);$('meshinfo').textContent='Geometrie nicht aktualisiert';}finally{loading=false;}}
+async function syncAndMesh(){if(!doc||loading)return;loading=true;status('Rust-Netz wird aktualisiert …');try{await sync();const response=await api('/api/mesh?resolution='+res);const result=await response.json();mesh=result;meshDirty=false;$('meshinfo').textContent=result.triangles.toLocaleString('de-DE')+' Dreiecke · '+(result.watertight?'geschlossene Oberfläche':'Netzprüfung erforderlich');status('3D-Geometrie aktualisiert');render();
+  if(doc.mechanics?.loads?.length && doc.mechanics?.supports?.length){
+    try{const fr=await api('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json','X-SolidCraft-Editor':'1'},body:'{}'});femReport=await fr.json();showFEM(femReport);render();}
+    catch(ex){$('feminfo').textContent='FEM: '+ex.message;}
+  }
+  }catch(e){mesh=null;status('Fehler: '+e.message,true);$('meshinfo').textContent='Geometrie nicht aktualisiert';}finally{loading=false;}}
 function defaultStations(edge){const a=Math.sqrt(Math.max(1e-6,doc.areas[edge]||.008)/Math.PI)*2;return[{t:0,profile:'circle',width:a,height:a,aspect:1,wall:.22,corner:.3,twist_deg:0},{t:1,profile:'circle',width:a,height:a,aspect:1,wall:.22,corner:.3,twist_deg:0}];}
 function stations(i){if(!doc.section_stations)doc.section_stations={};if(!doc.section_stations[String(i)])doc.section_stations[String(i)]={stations:defaultStations(i)};return doc.section_stations[String(i)].stations;}
 function rawStations(i){return doc.section_stations?.[String(i)]?.stations||defaultStations(i);}
@@ -56,8 +67,19 @@ function refreshInspector(){const panel=$('inspector');if(!doc)return;
  if(!selection){panel.innerHTML='<p class="small">Klicke auf einen Knoten oder eine Verbindung. Beide Endquerschnitte sind unabhängig einstellbar.</p>';return;}
  if(selection.type==='node'){
    const i=selection.index,p=doc.nodes[i];if(!p){selection=null;return refreshInspector()}
-   panel.innerHTML=`<div class="pill">Knoten ${i}</div><p class="small">Position frei ändern oder mit der Maus im 3D-Fenster verschieben.</p><div class="grid3">${field('X',p[0],'x')}${field('Y',p[1],'y')}${field('Z',p[2],'z')}</div><p class="small">Verbundene Kanten bewegen sich mit.</p>`;
-   panel.querySelectorAll('[data-edit]').forEach(el=>el.addEventListener('change',()=>{const axis={x:0,y:1,z:2}[el.dataset.edit];const v=+el.value;if(Number.isFinite(v))mutate(()=>{doc.nodes[i][axis]=v});}));return;
+   const m=doc.mechanics||{},ll=(m.loads||[]).find(l=>l.node===i),sp=(m.supports||[]).find(l=>l.node===i);
+   panel.innerHTML=`<div class="pill">Knoten ${i}</div><p class="small">Position frei ändern oder mit der Maus im 3D-Fenster verschieben.</p><div class="grid3">${field('X',p[0],'x')}${field('Y',p[1],'y')}${field('Z',p[2],'z')}</div><p class="small">Verbundene Kanten bewegen sich mit.</p>
+   <div class="section"><h3>Mechanische Bedingungen</h3><p class="small">${sp?'Fest eingespannt':'Freier Knoten'} · ${ll?'Kraft/Moment vorhanden':'Keine äußere Last'}</p>
+   ${ll?`<div class="grid3">${field('Fx (N)',ll.force[0],'force0',1)}${field('Fy (N)',ll.force[1],'force1',1)}${field('Fz (N)',ll.force[2],'force2',1)}</div>
+   <div class="grid3">${field('Mx (Nm)',(ll.moment||[0,0,0])[0],'moment0',1)}${field('My (Nm)',(ll.moment||[0,0,0])[1],'moment1',1)}${field('Mz (Nm)',(ll.moment||[0,0,0])[2],'moment2',1)}</div>`:''}
+   <div class="btnrow"><button id="toggleSupport">${sp?'Lager entfernen':'Fest einspannen'}</button><button id="toggleLoad">${ll?'Last entfernen':'Last hinzufügen'}</button></div></div>`;
+   panel.querySelector('#toggleSupport').onclick=()=>toggleSupport(i);
+   panel.querySelector('#toggleLoad').onclick=()=>toggleLoad(i);
+   panel.querySelectorAll('[data-edit]').forEach(el=>el.addEventListener('change',()=>{const key=el.dataset.edit,axis={x:0,y:1,z:2}[key],v=+el.value;if(Number.isFinite(v))mutate(()=>{
+   if(axis!==undefined)doc.nodes[i][axis]=v;
+   else if(key.startsWith('force'))(doc.mechanics.loads.find(l=>l.node===i)).force[+key.slice(-1)]=v;
+   else if(key.startsWith('moment'))(doc.mechanics.loads.find(l=>l.node===i)).moment[+key.slice(-1)]=v;
+ });}));return;
  }
  const i=selection.index;if(!doc.edges[i]){selection=null;return refreshInspector()}
  const edge=doc.edges[i],list=rawStations(i);stationIndex=Math.min(stationIndex,list.length-1);
@@ -86,6 +108,30 @@ function refreshInspector(){const panel=$('inspector');if(!doc)return;
  else if(key==='wall')st.wall=Math.max(.06,Math.min(.48,value));else if(key==='corner')st.corner=Math.max(0,Math.min(1,value));else st[key]=value;});
  }));
 }
+function ensureMechanics(){if(!doc.mechanics)doc.mechanics={material:{young_pa:210e9,poisson:.30,density_kg_m3:7850},supports:[],loads:[],volume_fraction:1};
+ if(!doc.mechanics.supports)doc.mechanics.supports=[];if(!doc.mechanics.loads)doc.mechanics.loads=[];return doc.mechanics;}
+function toggleSupport(i){mutate(()=>{const m=ensureMechanics(),at=m.supports.findIndex(s=>s.node===i);if(at<0)m.supports.push({node:i,fixed:[true,true,true,true,true,true]});else m.supports.splice(at,1);});}
+function toggleLoad(i){mutate(()=>{const m=ensureMechanics(),at=m.loads.findIndex(l=>l.node===i);if(at<0)m.loads.push({node:i,force:[0,0,-1000],moment:[0,0,0]});else m.loads.splice(at,1);});}
+async function mechanicalRun(opt=false){if(!doc)return;
+ try{await sync();const r=await api(opt?'/api/optimize':'/api/analyze',{
+  method:'POST',headers:{'Content-Type':'application/json','X-SolidCraft-Editor':'1'},body:JSON.stringify(opt?{iterations:12}:{})});
+ const data=await r.json();if(opt){const before=clone(doc);doc=data.document;backup(before);
+   femReport=data.after;status('FEM-Optimierung: '+data.accepted_iterations+' Schritte');
+   showFEM(data.after, data.before);refreshInspector();render();}
+ else {femReport=data;showFEM(data);render();status('3D-Balken-FEM berechnet');}
+ }catch(e){status('Mechanik: '+e.message,true);$('feminfo').textContent='Fehler: '+e.message;}
+}
+function showFEM(r,before){if(!r)return;const fmt=v=>Number(v).toPrecision(4);
+ $('feminfo').innerHTML=`<b>Max. Verschiebung:</b> ${fmt(r.max_displacement_m*1000)} mm<br>
+ <b>Compliance:</b> ${fmt(r.compliance_j)} J<br><b>Materialvolumen:</b> ${fmt(r.volume_m3*1e6)} cm³<br>
+ <b>Masse:</b> ${fmt(r.mass_kg)} kg${before?`<br><b>Verbesserung:</b> ${fmt((1-r.compliance_j/before.compliance_j)*100)} %`:''}
+ <p class="small">Nur lineare Balken-FEM. Keine Prüfung lokaler Spannungen oder Sicherheit.</p>`;
+}
+function loadTip(ld){const p=doc.nodes[ld.node],v=ld.force,m=Math.hypot(...v)||1;return p.map((x,i)=>x+.28*v[i]/m);}
+function drawArrow(from,to){const a=project(from),b=project(to),dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy)||1;
+ line(a,b,'#f6a764',3);const ux=dx/len,uy=dy/len;line(b,{x:b.x-ux*10-uy*5,y:b.y-uy*10+ux*5},'#f6a764',2);
+ line(b,{x:b.x-ux*10+uy*5,y:b.y-uy*10-ux*5},'#f6a764',2);
+}
 function resize(){const b=canvas.getBoundingClientRect(),dpr=devicePixelRatio||1;canvas.width=Math.max(1,Math.floor(b.width*dpr));canvas.height=Math.max(1,Math.floor(b.height*dpr));ctx.setTransform(dpr,0,0,dpr,0,0);render();}
 function bounds(){const mins=[Infinity,Infinity,Infinity],maxs=[-Infinity,-Infinity,-Infinity];for(const p of doc.nodes)for(let j=0;j<3;j++){mins[j]=Math.min(mins[j],p[j]);maxs[j]=Math.max(maxs[j],p[j]);}return{mins,maxs}}
 function fit(){if(!doc)return;const {mins,maxs}=bounds();view.center=mins.map((v,i)=>(v+maxs[i])/2);const span=Math.max(.45,...mins.map((v,i)=>maxs[i]-v));const b=canvas.getBoundingClientRect();view.zoom=Math.min(b.width*.68,b.height*.68)/span;render()}
@@ -97,14 +143,26 @@ function render(){if(!doc)return;ctx.clearRect(0,0,canvas.clientWidth,canvas.cli
  if(mesh&&$('showMesh').checked){let tris=[],v=mesh.vertices;const cap=3800,step=Math.max(1,Math.ceil(mesh.faces.length/cap));for(let k=0;k<mesh.faces.length;k+=step){const f=mesh.faces[k],p=f.map(i=>project(v[i]));const depth=(p[0].z+p[1].z+p[2].z)/3;tris.push({p,depth})}tris.sort((a,b)=>b.depth-a.depth);
  for(const tri of tris){const [a,b,c]=tri.p;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.lineTo(c.x,c.y);ctx.closePath();let cross=(b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x);ctx.fillStyle=cross>0?'rgba(83,163,199,.62)':'rgba(41,107,147,.46)';ctx.fill();}
  }
+ if(femReport?.displacements?.length===doc.nodes.length&&$('showDef').checked){
+ const amp=.22/Math.max(femReport.max_displacement_m||0,1e-12);
+ for(const [i,j] of doc.edges){if(!doc.nodes[i]||!doc.nodes[j])continue;
+ const a=doc.nodes[i].map((x,k)=>x+femReport.displacements[i][k]*amp);
+ const b=doc.nodes[j].map((x,k)=>x+femReport.displacements[j][k]*amp);
+ line(project(a),project(b),'#d88ccc',2,[5,4]);}
+ }
  if($('showSkeleton').checked){const es=doc.edges.map((edge,i)=>({edge,i,depth:project(centerOfEdge(i)).z})).sort((a,b)=>b.depth-a.depth);
  for(const {edge,i} of es){const a=project(doc.nodes[edge[0]]),b=project(doc.nodes[edge[1]]),selected=selection?.type==='edge'&&selection.index===i;line(a,b,selected?'#f6ad68':doc.active?.[i]===false?'#62717a':'#5db8e1',selected?5:3,doc.active?.[i]===false?[4,4]:[]);if(selected){ctx.font='11px system-ui';ctx.fillStyle='#f6ad68';ctx.fillText('Kante '+i,(a.x+b.x)/2+5,(a.y+b.y)/2-9);}}
  if(selection?.type==='edge'){const ss=rawStations(selection.index);ss.forEach((st,i)=>{const p=project(centerOfEdge(selection.index,st.t));ctx.beginPath();ctx.arc(p.x,p.y,i===stationIndex?7:5,0,Math.PI*2);ctx.fillStyle=i===stationIndex?'#f6ad68':'#70cba3';ctx.fill();ctx.lineWidth=1.5;ctx.strokeStyle='#e4f4ee';ctx.stroke();});}
+ for(const sp of (doc.mechanics?.supports||[])){const p=project(doc.nodes[sp.node]||[0,0,0]);ctx.strokeStyle='#78d4aa';ctx.lineWidth=2;ctx.strokeRect(p.x-10,p.y-10,20,20);}
+ for(const ld of (doc.mechanics?.loads||[])){if(!doc.nodes[ld.node])continue;drawArrow(doc.nodes[ld.node],loadTip(ld));const pt=project(loadTip(ld));ctx.fillStyle='#e8b581';ctx.font='11px system-ui';ctx.fillText(Math.round(Math.hypot(...ld.force))+' N',pt.x+8,pt.y-4);}
  for(let i=0;i<doc.nodes.length;i++){const p=project(doc.nodes[i]),sel=selection?.type==='node'&&selection.index===i;ctx.beginPath();ctx.arc(p.x,p.y,sel?8:5.5,0,Math.PI*2);ctx.fillStyle=sel?'#f8b36d':'#c2e8fa';ctx.fill();ctx.strokeStyle=sel?'#ffa85b':'#4d9fbf';ctx.lineWidth=2;ctx.stroke();ctx.fillStyle='#a7becb';ctx.font='10px system-ui';ctx.fillText('N'+i,p.x+8,p.y-8);}
  }
  const sel=selection;if(sel?.type==='node'){$('coord').textContent=doc.nodes[sel.index]?.map((x,i)=>['X','Y','Z'][i]+' '+x.toFixed(3)).join(' · ')||'';}else $('coord').textContent='3D-Skeletteditor · Ansicht frei drehbar';
 }
-function hit(x,y){if(selection?.type==='edge'){const list=rawStations(selection.index);for(let i=0;i<list.length;i++){const p=project(centerOfEdge(selection.index,list[i].t));if(Math.hypot(p.x-x,p.y-y)<12)return{type:'station',index:selection.index,station:i}}}
+function hit(x,y){for(let i=0;i<(doc.mechanics?.loads||[]).length;i++){
+ const ld=doc.mechanics.loads[i];if(!doc.nodes[ld.node])continue;const p=project(loadTip(ld));
+ if(Math.hypot(p.x-x,p.y-y)<15)return{type:'force',index:i};}
+ if(selection?.type==='edge'){const list=rawStations(selection.index);for(let i=0;i<list.length;i++){const p=project(centerOfEdge(selection.index,list[i].t));if(Math.hypot(p.x-x,p.y-y)<12)return{type:'station',index:selection.index,station:i}}}
  for(let i=0;i<doc.nodes.length;i++){const p=project(doc.nodes[i]);if(Math.hypot(p.x-x,p.y-y)<12)return{type:'node',index:i}}let best=null,dist=13;
  for(let i=0;i<doc.edges.length;i++){const edge=doc.edges[i],a=project(doc.nodes[edge[0]]),b=project(doc.nodes[edge[1]]),dx=b.x-a.x,dy=b.y-a.y,t=Math.max(0,Math.min(1,((x-a.x)*dx+(y-a.y)*dy)/(dx*dx+dy*dy||1))),d=Math.hypot(x-(a.x+t*dx),y-(a.y+t*dy));if(d<dist){best={type:'edge',index:i};dist=d;}}
  return best;}
@@ -115,20 +173,33 @@ function moveWorld(dx,dy){const yaw=view.yaw,pitch=view.pitch,cy=Math.cos(yaw),s
 }
 canvas.addEventListener('pointerdown',e=>{if(!doc)return;canvas.setPointerCapture(e.pointerId);const rect=canvas.getBoundingClientRect(),x=e.clientX-rect.left,y=e.clientY-rect.top,h=hit(x,y);
  if(connectFrom!==null&&h?.type==='node'){const a=connectFrom,b=h.index;connectFrom=null;if(a!==b&&!doc.edges.some(x=>x.includes(a)&&x.includes(b)))mutate(()=>{doc.edges.push([a,b]);doc.areas.push(.008);doc.active.push(true);select({type:'edge',index:doc.edges.length-1});});$('connect').textContent='Verbinden';return;}
+ if(h?.type==='force'){const ld=doc.mechanics.loads[h.index];select({type:'node',index:ld.node});
+   drag={mode:'force',start:[x,y],original:clone(ld.force),before:JSON.stringify(doc),index:h.index,moved:false};return;}
  if(h?.type==='station'){stationIndex=h.station;select({type:'edge',index:h.index});stationIndex=h.station;refreshInspector();render();return;}
  if(h?.type==='node'){select(h);drag={mode:'node',start:[x,y],original:clone(doc.nodes[h.index]),before:JSON.stringify(doc),index:h.index,moved:false};}
  else if(h?.type==='edge'){select(h);drag=null;}
  else{drag={mode:'orbit',start:[x,y],yaw:view.yaw,pitch:view.pitch};}
 });
 canvas.addEventListener('pointermove',e=>{if(!drag)return;const r=canvas.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top,dx=x-drag.start[0],dy=y-drag.start[1];if(drag.mode==='orbit'){view.yaw=drag.yaw+dx*.007;view.pitch=Math.max(.12,Math.min(1.48,drag.pitch+dy*.006));}
- else if(drag.mode==='node'){const d=moveWorld(dx,dy);doc.nodes[drag.index]=drag.original.map((a,j)=>a+d[j]);drag.moved=Math.hypot(dx,dy)>2;}render();});
-canvas.addEventListener('pointerup',()=>{if(drag?.mode==='node'&&drag.moved){const prev=JSON.parse(drag.before);backup(prev);refreshInspector();}drag=null;});
+ else if(drag.mode==='node'){const d=moveWorld(dx,dy);doc.nodes[drag.index]=drag.original.map((a,j)=>a+d[j]);drag.moved=Math.hypot(dx,dy)>2;}
+ else if(drag.mode==='force'){const d=moveWorld(dx,dy),m=Math.hypot(...drag.original)||1000;
+ doc.mechanics.loads[drag.index].force=drag.original.map((a,j)=>a+d[j]*m/.28);drag.moved=Math.hypot(dx,dy)>2;}
+ render();});
+canvas.addEventListener('pointerup',()=>{if((drag?.mode==='node'||drag?.mode==='force')&&drag.moved){const prev=JSON.parse(drag.before);backup(prev);refreshInspector();}drag=null;});
 canvas.addEventListener('wheel',e=>{e.preventDefault();view.zoom=Math.max(10,Math.min(1500,view.zoom*(e.deltaY>0?.91:1.10)));render();},{passive:false});
-$('fit').onclick=fit;$('regen').onclick=()=>syncAndMesh();$('showMesh').onchange=render;$('showSkeleton').onchange=render;$('resolution').oninput=e=>{$('resLabel').textContent=e.target.value;res=+e.target.value};$('resolution').onchange=()=>syncAndMesh();
+$('addSupport').onclick=()=>{if(selection?.type==='node')toggleSupport(selection.index);else status('Zuerst einen Knoten auswählen',true)};
+$('addForce').onclick=()=>{if(selection?.type==='node')toggleLoad(selection.index);else status('Zuerst einen Knoten auswählen',true)};
+$('analyze').onclick=()=>mechanicalRun(false);$('optimize').onclick=()=>mechanicalRun(true);
+$('volumeFraction').oninput=e=>{$('volumeLabel').textContent=e.target.value;};
+$('volumeFraction').onchange=e=>mutate(()=>{ensureMechanics().volume_fraction=+e.target.value/100;});
+$('fit').onclick=fit;$('regen').onclick=()=>syncAndMesh();$('showMesh').onchange=render;$('showSkeleton').onchange=render;$('showDef').onchange=render;$('resolution').oninput=e=>{$('resLabel').textContent=e.target.value;res=+e.target.value};$('resolution').onchange=()=>syncAndMesh();
 $('addNode').onclick=()=>mutate(()=>{const p=view.center.map((x,i)=>x+(i===0?.3:0));doc.nodes.push(p);select({type:'node',index:doc.nodes.length-1});});
 $('connect').onclick=()=>{if(selection?.type!=='node'){status('Zuerst einen Startknoten wählen',true);return;}connectFrom=selection.index;$('connect').textContent='Ziel anklicken …';status('Zielknoten auswählen')};
 $('remove').onclick=()=>{if(!selection)return;mutate(()=>{if(selection.type==='edge'){const idx=selection.index;doc.edges.splice(idx,1);doc.areas.splice(idx,1);doc.active.splice(idx,1);const next={};for(const [k,v]of Object.entries(doc.section_stations||{})){const n=+k;if(n<idx)next[n]=v;else if(n>idx)next[n-1]=v;}doc.section_stations=next;}
- else{const idx=selection.index;if(doc.nodes.length<=2){status('Mindestens zwei Knoten behalten',true);return;}doc.nodes.splice(idx,1);const nextEdges=[],areas=[],active=[],ss={};doc.edges.forEach((e,i)=>{if(e.includes(idx))return;const n=nextEdges.length;nextEdges.push(e.map(v=>v>idx?v-1:v));areas.push(doc.areas[i]);active.push(doc.active[i]);if(doc.section_stations?.[i])ss[n]=doc.section_stations[i]});doc.edges=nextEdges;doc.areas=areas;doc.active=active;doc.section_stations=ss;}selection=null;});};
+ else{const idx=selection.index;if(doc.nodes.length<=2){status('Mindestens zwei Knoten behalten',true);return;}doc.nodes.splice(idx,1);
+ if(doc.mechanics){doc.mechanics.loads=(doc.mechanics.loads||[]).filter(v=>v.node!==idx).map(v=>({...v,node:v.node>idx?v.node-1:v.node}));
+ doc.mechanics.supports=(doc.mechanics.supports||[]).filter(v=>v.node!==idx).map(v=>({...v,node:v.node>idx?v.node-1:v.node}));}
+ const nextEdges=[],areas=[],active=[],ss={};doc.edges.forEach((e,i)=>{if(e.includes(idx))return;const n=nextEdges.length;nextEdges.push(e.map(v=>v>idx?v-1:v));areas.push(doc.areas[i]);active.push(doc.active[i]);if(doc.section_stations?.[i])ss[n]=doc.section_stations[i]});doc.edges=nextEdges;doc.areas=areas;doc.active=active;doc.section_stations=ss;}selection=null;});};
 function applyHistory(source,target){if(!source.length)return;target.push(JSON.stringify(doc));doc=JSON.parse(source.pop());selection=null;mesh=null;updated();refreshInspector();render();}
 $('undo').onclick=()=>applyHistory(undo,redo);$('redo').onclick=()=>applyHistory(redo,undo);
 window.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&e.key.toLowerCase()==='z'){e.preventDefault();$('undo').click();}else if((e.ctrlKey||e.metaKey)&&(e.key.toLowerCase()==='y'||(e.shiftKey&&e.key.toLowerCase()==='z'))){e.preventDefault();$('redo').click();}});
@@ -138,7 +209,9 @@ $('import').onclick=()=>$('fileInput').click();$('fileInput').onchange=async e=>
 $('save').onclick=async()=>{try{await sync();const resp=await api('/api/save',{method:'POST',headers:{'Content-Type':'application/json','X-SolidCraft-Editor':'1'},body:'{}'});const data=await resp.json();status('Gespeichert: '+data.path);}catch(e){status(e.message,true)}};
 async function exportMesh(kind){try{await sync();const resp=await api('/api/download?format='+kind+'&resolution='+Math.max(res,44));const blob=await resp.blob();downloadBlob(blob,'skeleton.'+kind,kind==='stl'?'model/stl':'text/plain');status(kind.toUpperCase()+' exportiert');}catch(e){status('Exportfehler: '+e.message,true)}}
 $('stl').onclick=()=>exportMesh('stl');$('obj').onclick=()=>exportMesh('obj');
-async function init(){try{const r=await api('/api/state');doc=await r.json();if(!doc.active||!doc.active.length)doc.active=doc.edges.map(()=>true);if(!doc.section_stations)doc.section_stations={};$('counts').textContent='';refreshCounters();resize();fit();select({type:'edge',index:0});await syncAndMesh();}catch(e){status('Startfehler: '+e.message,true)}}
+async function init(){try{const r=await api('/api/state');doc=await r.json();if(!doc.active||!doc.active.length)doc.active=doc.edges.map(()=>true);if(!doc.section_stations)doc.section_stations={};
+ $('volumeFraction').value=Math.round((doc.mechanics?.volume_fraction||1)*100);
+ $('volumeLabel').textContent=$('volumeFraction').value;$('counts').textContent='';refreshCounters();resize();fit();select({type:'edge',index:0});await syncAndMesh();}catch(e){status('Startfehler: '+e.message,true)}}
 window.addEventListener('resize',resize);init();
 })();
 </script>
