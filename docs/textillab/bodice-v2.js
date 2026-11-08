@@ -33,11 +33,11 @@ function measureValues(input={}) {
   const result={};
   for(const [name,v] of Object.entries(defaults)){
     const n=Number(input[name]??v);
-    if(!Number.isFinite(n)||n<=0||n>300) throw Error("Bitte "+name+" als gültiges Maß in cm eingeben.");
+    if(!Number.isFinite(n)||n<=0||n>300) throw Error("Ungültiges Körpermaß: "+name+" (cm).");
     result[name]=n*10;
   }
   if(result.shoulder>result.chest*.8 || result.neck>result.shoulder*1.25)
-    throw Error("Schulter-, Hals- und Brustumfang passen nicht zusammen.");
+    throw Error("Körpermaße prüfen: Schulter-, Hals- und Brustumfang passen nicht zusammen.");
   if(result.bustHeight>=result.frontLength-40)
     throw Error("Brusthöhe muss deutlich oberhalb der Taille liegen.");
   if(result.waistToHip>=result.hemBelowWaist)
@@ -230,7 +230,7 @@ function render(measurements={},allowance=10,density=210){
   out.push(techPiece(front,frontDX,false,allowance));
   out.push(techPiece(back,backDX,true,allowance));
   out.push('<text x="75" y="29" font-size="15" font-weight="700" fill="#3b454e">TEXTILLAB · VT / RT GRUNDSCHNITT v2</text>');
-  out.push('<text x="75" y="49" font-size="11" fill="#62584e">Abnäher, Hilfslinien &amp; Fadenlauf · Maße in mm · keine freigegebene Fertigungsvorlage</text>');
+  out.push('<text x="75" y="49" font-size="11" fill="#62584e">Abnäher, Hilfslinien &amp; Fadenlauf · Maße in mm · KONZEPT-GRUNDSCHNITT · keine freigegebene Fertigungsvorlage</text>');
   out.push('</svg>');
   return {
     svg:out.join("\n"),pieces:2,sewnArea:areaSewn,cutArea:areaCut,mass,
