@@ -5,6 +5,7 @@ const TYPES=[
  ["top","Oberteil","VT · RT · Ärmel"],
  ["jacket","Jacke","Kragen · Ärmel"],
  ["trousers","Hose","Vorder- / Hinterhose"],
+ ["hood","Kapuze","2 Seiten · Nahtprüfung"],
  ["skirt","Rock","Abnäher · Bund"],
  ["glove","Handschuh","Hand · Daumen"],
  ["beanie","Mütze","Keile · Bündchen"],
@@ -14,15 +15,16 @@ const TYPES=[
 const CORE={
  top:["chest","waist","hip","shoulder","sleeve","ease"],
  jacket:["chest","waist","hip","back","shoulder","sleeve","ease"],
- trousers:["waist","hip","inseam"],
+ trousers:["waist","hip","inseam"],hood:[],
  skirt:["waist","hip"],glove:["hand","handLength"],
  beanie:["head"],hat:["head"],mesh:[]
 };
-const PARTS={top:["VT","RT","AR"],trousers:["VH","HH"]};
+const PARTS={top:["VT","RT","AR"],trousers:["VH","HH"],hood:["KH"]};
 const ICONS={
  top:'<path d="M19 10 26 7l6 6 6-6 7 3 8 13-8 5-5-7v29H16V21l-5 7-8-5z"/><path d="M26 7v5l6 6 6-6V7"/>',
  jacket:'<path d="M20 9 26 6l6 6 6-6 6 3 9 14-7 5-5-7v29H16V21l-5 7-7-5z"/><path d="m26 6 6 12 6-12M32 18v31M23 16l5 6m13-6-5 6"/><circle cx="34" cy="29" r="1"/><circle cx="34" cy="36" r="1"/>',
  trousers:'<path d="M14 8h36l-2 19-8 24H30l2-23-2 23H20L12 27z"/><path d="M14 15h36M32 8v20m-16 1 11 2M48 29l-12 2"/>',
+ hood:'<path d="M15 49c-4-19-3-31 11-40 14-8 29 4 29 19 0 11-8 16-16 23H18z"/><path d="M15 49 22 45c12-8 12-17 23-22M27 11c5 5 12 11 13 18"/>',
  skirt:'<path d="M19 10h26l-2 8 9 31H12l9-31z"/><path d="M20 17h24M25 10l2 7m10-7-2 7"/>',
  glove:'<path d="M19 51 9 37c-2-3 3-7 6-4l5 5V13c0-5 7-5 7 0v16-22c0-5 7-5 7 0v23-19c0-5 7-5 7 0v21-13c0-5 7-5 7 0v19c0 7-4 12-10 15z"/>',
  beanie:'<path d="M12 36c0-16 7-27 20-27s20 11 20 27v7H12z"/><path d="M11 36h42v10H11zM32 9v27M18 19l14 17m14-17L32 36"/>',
@@ -117,7 +119,7 @@ function filterMeasures(){
   const input=label.querySelector("input[id^='m-']");if(!input)continue;
   label.dataset.hidden=String(!displayed.has(input.id.slice(2)));
  }
- main.style.display=template.value==="mesh"?"none":"";
+ main.style.display=(template.value==="mesh"||template.value==="hood")?"none":"";
  main.open=true;
 }
 function refreshZoom(){
@@ -159,12 +161,15 @@ function setStep(id){
  const t=template.value;
  const targets={
   template:host,
-  measure:t==="trousers"?
+  measure:t==="hood"?document.querySelector(".hood-setup .measure-details"):
+   t==="trousers"?
    document.querySelector(".pants-setup .measure-details"):
    document.querySelector(".sidebar > .section > .measure-details"),
-  construction:t==="trousers"?document.querySelector(".pants-setup"):
+  construction:t==="hood"?document.querySelector(".hood-setup"):
+   t==="trousers"?document.querySelector(".pants-setup"):
    t==="top"?document.querySelector(".v1-panel"):preview,
-  check:t==="trousers"?$("pantsRuleReport"):
+  check:t==="hood"?$("hoodSeamReport"):
+   t==="trousers"?$("pantsRuleReport"):
    t==="top"?$("draftRuleReport"):$("cutArea")
  };
  targets[id]?.scrollIntoView({behavior:"smooth",block:"nearest"});
