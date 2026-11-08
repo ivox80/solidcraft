@@ -5,8 +5,11 @@ use std::fs;
 use std::path::Path;
 use textillab::drafting_rules::{self, Fit, Settings, Style};
 use textillab::garments::{export_svg, Garment, Measurements};
+use textillab::hood_rules::{
+    self, Measurements as HoodMeasurements, Options as HoodOptions, Profile as HoodProfile,
+    SewingMode as HoodMode, Style as HoodStyle,
+};
 use textillab::pants_rules::{self, PantsMeasures};
-use textillab::hood_rules::{self, Measurements as HoodMeasurements, Options as HoodOptions, Profile as HoodProfile, SewingMode as HoodMode, Style as HoodStyle};
 
 fn main() -> Result<(), String> {
     let args: Vec<String> = env::args().skip(1).collect();
@@ -21,7 +24,9 @@ fn main() -> Result<(), String> {
         );
         return Ok(());
     }
-    if args[0] == "hood" {return hood_cli(&args[1..]);}
+    if args[0] == "hood" {
+        return hood_cli(&args[1..]);
+    }
     let garment: Garment = args[0].parse()?;
     let mut measures = Measurements::default();
     let mut pants = PantsMeasures::default();
@@ -130,7 +135,6 @@ fn main() -> Result<(), String> {
     Ok(())
 }
 
-
 fn hood_cli(args: &[String]) -> Result<(), String> {
     // First determine the body profile so input values always override its
     // independently supplied *example* defaults, regardless of CLI order.
@@ -153,48 +157,70 @@ fn hood_cli(args: &[String]) -> Result<(), String> {
             opts.material_stretch_verified = true;
         } else if arg == "--drawstrings" {
             opts.drawstrings = true;
-        } else if matches!(arg.as_str(), "--profile" | "--style" | "--neck-mode"
-            | "--planned-ease" | "--stretch" | "--allowance" | "--density" | "--out") {
+        } else if matches!(
+            arg.as_str(),
+            "--profile"
+                | "--style"
+                | "--neck-mode"
+                | "--planned-ease"
+                | "--stretch"
+                | "--allowance"
+                | "--density"
+                | "--out"
+        ) {
             i += 1;
-            let value = args.get(i).ok_or_else(||format!("Missing value for {arg}"))?;
+            let value = args
+                .get(i)
+                .ok_or_else(|| format!("Missing value for {arg}"))?;
             match arg.as_str() {
-                "--profile" => {},
+                "--profile" => {}
                 "--style" => opts.style = HoodStyle::parse(value)?,
                 "--neck-mode" => opts.mode = HoodMode::parse(value)?,
-                "--planned-ease" => opts.planned_ease_mm =
-                    value.parse().map_err(|_|"Invalid ease in mm")?,
-                "--stretch" => opts.material_stretch_pct =
-                    value.parse().map_err(|_|"Invalid stretch percent")?,
-                "--allowance" => opts.seam_allowance_mm =
-                    value.parse().map_err(|_|"Invalid seam allowance")?,
-                "--density" => opts.density_g_m2 =
-                    value.parse().map_err(|_|"Invalid density")?,
+                "--planned-ease" => {
+                    opts.planned_ease_mm = value.parse().map_err(|_| "Invalid ease in mm")?
+                }
+                "--stretch" => {
+                    opts.material_stretch_pct =
+                        value.parse().map_err(|_| "Invalid stretch percent")?
+                }
+                "--allowance" => {
+                    opts.seam_allowance_mm = value.parse().map_err(|_| "Invalid seam allowance")?
+                }
+                "--density" => opts.density_g_m2 = value.parse().map_err(|_| "Invalid density")?,
                 "--out" => out.clone_from(value),
                 _ => unreachable!(),
             }
         } else {
-            let (key,value) = arg.split_once('=')
-                .ok_or_else(||format!("Expected hood measure=value, got {arg}"))?;
-            let number:f64 = value.parse().map_err(|_|format!("Invalid value: {key}"))?;
-            measures.set_cm(key,number)?;
+            let (key, value) = arg
+                .split_once('=')
+                .ok_or_else(|| format!("Expected hood measure=value, got {arg}"))?;
+            let number: f64 = value.parse().map_err(|_| format!("Invalid value: {key}"))?;
+            measures.set_cm(key, number)?;
         }
         i += 1;
     }
-    let detailed=hood_rules::draft(measures,opts)?;
-    let report=hood_rules::export(measures,opts)?;
+    let detailed = hood_rules::draft(measures, opts)?;
+    let report = hood_rules::export(measures, opts)?;
     if let Some(parent) = Path::new(&out).parent() {
         if !parent.as_os_str().is_empty() {
-            fs::create_dir_all(parent).map_err(|e|e.to_string())?;
+            fs::create_dir_all(parent).map_err(|e| e.to_string())?;
         }
     }
-    fs::write(&out,&report.svg).map_err(|e|e.to_string())?;
-    println!("Hood: {} pieces | original experimental geometry, NOT production validated",
-        report.pieces_to_cut);
+    fs::write(&out, &report.svg).map_err(|e| e.to_string())?;
+    println!(
+        "Hood: {} pieces | original experimental geometry, NOT production validated",
+        report.pieces_to_cut
+    );
     for seam in &detailed.seams {
-        println!("{}: hood {:.3} mm | garment {:.3} mm | delta {:+.3} mm | {}",
-            seam.id,seam.hood_mm,seam.garment_mm,seam.delta_mm,
-            if seam.matched {"OK"} else {"ERROR"});
+        println!(
+            "{}: hood {:.3} mm | garment {:.3} mm | delta {:+.3} mm | {}",
+            seam.id,
+            seam.hood_mm,
+            seam.garment_mm,
+            seam.delta_mm,
+            if seam.matched { "OK" } else { "ERROR" }
+        );
     }
-    println!("SVG: {}",out);
+    println!("SVG: {}", out);
     Ok(())
 }
