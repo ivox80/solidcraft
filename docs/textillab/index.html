@@ -9,6 +9,8 @@
   <script defer src="./browser-engine.js"></script>
   <script defer src="./bodice-v2.js"></script>
   <script defer src="./pants-system.js"></script>
+  <script defer src="./seam-contracts.js"></script>
+  <script defer src="./hood-system.js"></script>
   <script defer src="./ruleset-registry.js"></script>
   <script defer src="./pattern-library.js"></script>
   <script defer src="./drafting-system.js"></script>
@@ -20,7 +22,7 @@
   <div class="brand">
     <div class="brandmark">SC</div>
     <div><strong>SolidCraft</strong><span> / TextilLab Schnittatelier</span></div>
-    <span class="tag">v1.2 · Grafisches Schnittatelier</span>
+    <span class="tag">v1.3 · Kapuze + Nahtkontrolle</span>
   </div>
   <div class="topactions">
     <span class="topnote">Online-Demo · Browser-Geometrie</span>
@@ -46,6 +48,7 @@
         <option value="top">Oberteil – VT / RT + Ärmel</option>
         <option value="jacket">Jacke</option>
         <option value="trousers">Hose – Vorder-/Hinterhose v2</option>
+        <option value="hood">Kapuze – parametrisch (KH)</option>
         <option value="glove">Handschuh</option>
         <option value="beanie">Mütze</option>
         <option value="hat">Hut</option>
@@ -70,7 +73,62 @@
     </div>
     
 
-    <div class="pants-only pants-setup">
+    <div class="hood-only hood-setup">
+  <div class="sectiontitle">KAPUZEN-ATELIER · NÄHTE KONTROLLIEREN</div>
+  <div class="section">
+    <div class="fieldrow"><label for="hoodProfile">Schnittprofil</label>
+      <select id="hoodProfile"><option value="women">Damen / DOB</option>
+      <option value="men">Herren / HAKA</option><option value="child">Kinder</option></select>
+    </div>
+    <div class="fieldrow"><label for="hoodStyle">Kapuzentyp</label>
+      <select id="hoodStyle"><option value="close">Knapp anliegend</option>
+      <option value="relaxed">Aufgelockert</option></select>
+    </div>
+    <div class="fieldrow" id="hoodChildAgeRow" hidden>
+      <label for="hoodAgeYears">Kinderalter</label>
+      <div class="inputunit"><input id="hoodAgeYears" type="number" min="1" max="14" step="1" value="8"/><span>Jahre</span></div>
+    </div>
+    <p class="hint">Getrennte Maßprofile mit editierbaren Beispielwerten. Keine unbelegten DOB-/HAKA- oder Kinder-Größentabellen.</p>
+    <details class="measure-details" open>
+      <summary>Kapuzen- und Anschlussmaße <span>(cm)</span></summary>
+      <div class="measure-grid">
+        <label class="measure-input"><span>Kopfumfang</span><input id="hoodHead" type="number" value="57" min="30" max="75" step=".5"/></label>
+        <label class="measure-input"><span>Halsloch hinten / Hälfte</span><input id="hoodBackNeck" type="number" value="10" min="4" max="25" step=".5"/></label>
+        <label class="measure-input"><span>Halsloch vorne / Hälfte</span><input id="hoodFrontNeck" type="number" value="12" min="4" max="25" step=".5"/></label>
+        <label class="measure-input"><span>Kapuzenhöhe</span><input id="hoodHeight" type="number" value="32" min="15" max="50" step=".5"/></label>
+        <label class="measure-input"><span>Kapuzentiefe</span><input id="hoodDepth" type="number" value="27" min="15" max="50" step=".5"/></label>
+      </div>
+      <p class="hint">Halslochlängen werden **an der Nahtlinie** des zugehörigen Oberteils gemessen – nicht an der Zuschnittkante.</p>
+    </details>
+    <div class="sectiontitle">NAHTVERBINDUNG</div>
+    <div class="fieldrow"><label for="hoodNeckMode">Verarbeitung</label>
+      <select id="hoodNeckMode"><option value="match">Gleich lang</option>
+        <option value="ease">Gezielt einhalten</option>
+        <option value="stretch">Material geprüft dehnen</option>
+      </select>
+    </div>
+    <div class="fieldrow" id="hoodEaseRow" hidden>
+      <label for="hoodPlannedEase">Einhalteweite / Hälfte</label>
+      <div class="inputunit"><input id="hoodPlannedEase" type="number" value=".4" min=".1" max="3" step=".1"/><span>cm</span></div>
+    </div>
+    <div class="fieldrow" id="hoodStretchRow" hidden>
+      <label for="hoodStretchPct">Geprüfte Dehnung</label>
+      <div class="inputunit"><input id="hoodStretchPct" type="number" value="4" min=".1" max="12" step=".5"/><span>%</span></div>
+    </div>
+    <label id="hoodVerifiedRow" class="hood-verified" hidden>
+      <input id="hoodVerifiedMaterial" type="checkbox"/> Dehnung am Material gemessen und geprüft
+    </label>
+    <div id="hoodSeamReport" class="hood-seam-report" aria-live="polite"></div>
+  </div>
+  <div class="section">
+    <a href="https://www.muellerundsohn.com/allgemein/schnittkonstruktion-kapuze/"
+       target="_blank" rel="noopener noreferrer">Konstruktionsreferenz Müller &amp; Sohn ↗</a>
+    <p class="hint">Vorlagenorientierte, eigenständige Näherung. Schneiderische Passform, Abnäher und Verarbeitung sind noch nicht validiert.</p>
+    <p class="hint">Kinder: keine Kordeln/Zugbänder am Hals; Gesichtsfeld, Hörvermögen und Komfort am Probeteil prüfen.</p>
+  </div>
+</div>
+
+<div class="pants-only pants-setup">
   <div class="sectiontitle">HOSENSCHNITT · REGELBASIERT</div>
   <div class="section">
     <label class="fieldlabel" for="pantsMethod">Konstruktionssystem</label>
