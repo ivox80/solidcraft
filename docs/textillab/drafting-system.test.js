@@ -90,3 +90,17 @@ test("legacy pattern interface remains usable",()=>{
   assert.equal(old.pieces,4);
   assert.equal(base.render({},10,210,{sleeves:false}).pieces,2);
 });
+
+test("SVG dimension numbers show the measured sketch span, not full-body input values",()=>{
+  const bodice=base.draft();
+  const vt=bodice.pieces[0],sleeve=bodice.pieces[2];
+  const actualShoulder=Math.hypot(
+    vt.points.shoulderStart[0]-vt.points.shoulderEnd[0],
+    vt.points.shoulderStart[1]-vt.points.shoulderEnd[1]
+  )/10;
+  const sleeveSpan=(Math.max(...sleeve.outline.map(p=>p[0])))/10;
+  const out=drafting.generate();
+  assert.ok(out.svg.includes("SL "+actualShoulder.toFixed(1)+" cm"));
+  assert.ok(out.svg.includes("ÄB "+sleeveSpan.toFixed(1)+" cm"));
+  assert.ok(!out.svg.includes("Sch 44.0 cm"));
+});
