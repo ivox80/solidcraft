@@ -42,6 +42,8 @@ jobs:
           node --check ../docs/textillab/browser-engine.js
           node --check ../docs/textillab/pattern-library.js
           node --check ../docs/textillab/bodice-v2.js
+          node --check ../docs/textillab/drafting-system.js
+          node --test ../docs/textillab/drafting-system.test.js
           node --test ../docs/textillab/bodice-v2.test.js
           node --test ../docs/textillab/browser-engine.test.js
           node --test ../docs/textillab/pattern-library.test.js
@@ -63,6 +65,18 @@ jobs:
       - name: VT/RT v2 bodice SVG smoke test
         run: |
           cargo run --release --bin textillab-pattern -- top chest=108 waist=89 hip=106 frontLength=48 backWaist=44 bustHeight=28 bustSpan=20 neck=39 armholeDepth=23 --out smoke-exports/bodice-v2.svg
+      - name: v1.0 calibrated bodice CLI smoke test
+        run: |
+          cargo run --release --bin textillab-pattern -- top --fit loose --style coat --cap-ease 24 --torso-mm 20 --hip-mm 30 --hem-mm 40 --sleeve-mm 25 --out smoke-exports/textillab-v1.svg
+          cargo run --release --bin textillab-pattern -- top --style sleeveless --out smoke-exports/textillab-v1-sleeveless.svg
+      - name: Check v1.0 annotated pattern exports
+        shell: bash
+        run: |
+          test -s smoke-exports/textillab-v1.svg
+          test -s smoke-exports/textillab-v1-sleeveless.svg
+          grep -q 'data-ruleset="textillab-experimental-1.0"' smoke-exports/textillab-v1.svg
+          grep -q 'data-sleeves="0"' smoke-exports/textillab-v1-sleeveless.svg
+          grep -q 'ÄL' smoke-exports/textillab-v1.svg
       - name: Check bodice features in SVG
         shell: bash
         run: |
