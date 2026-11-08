@@ -245,11 +245,15 @@
       }
       if(layers.dimensions){
         const referenceY=p.levels.knee;
+        lines.push('<g class="tl-dimension" data-measure="knee">');
         lines.push('<path d="M '+fmt(extremes[0])+' '+fmt(referenceY+24)+' H '+fmt(extremes[1])+'" stroke="#a2dbe5" stroke-width=".9"/>');
         lines.push('<text x="'+fmt(extremes[1]-5)+'" y="'+fmt(referenceY+19)+'" text-anchor="end" fill="#e0f2f6" font-size="11">Kn '+(d.bodyValues.knee/2).toFixed(1)+' cm / Schnittpaar</text>');
+        lines.push("</g>");
         const dx=extremes[1]+34,y0=0,y1=p.levels.hem;
+        lines.push('<g class="tl-dimension" data-measure="outseam">');
         lines.push('<path d="M '+fmt(dx)+' '+fmt(y0)+' V '+fmt(y1)+'" stroke="#a2dbe5" stroke-width=".9"/>');
         lines.push('<text x="'+fmt(dx+8)+'" y="'+fmt((y0+y1)/2)+'" fill="#e0f2f6" font-size="11">SL '+d.bodyValues.outseam.toFixed(1)+' cm</text>');
+        lines.push("</g>");
       }
       lines.push('</g>');
       if(layers.labels)lines.push('<text x="'+fmt(x+(s.maxx-s.minx)/2)+'" y="59" text-anchor="middle" fill="#e0edf7" font-size="13" font-weight="700">'+p.id+' · '+p.name+' · 2×</text>');
