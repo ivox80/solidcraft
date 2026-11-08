@@ -3,8 +3,8 @@
 use std::env;
 use std::fs;
 use std::path::Path;
+use textillab::drafting_rules::{self, Fit, Settings, Style};
 use textillab::garments::{export_svg, Garment, Measurements};
-use textillab::drafting_rules::{self, Fit, Style, Settings};
 
 fn main() -> Result<(), String> {
     let args: Vec<String> = env::args().skip(1).collect();
@@ -26,9 +26,19 @@ fn main() -> Result<(), String> {
     let mut index = 1;
     while index < args.len() {
         let argument = &args[index];
-        if matches!(argument.as_str(), "--allowance" | "--density" | "--out"
-            | "--fit" | "--style" | "--cap-ease" | "--torso-mm"
-            | "--hip-mm" | "--hem-mm" | "--sleeve-mm") {
+        if matches!(
+            argument.as_str(),
+            "--allowance"
+                | "--density"
+                | "--out"
+                | "--fit"
+                | "--style"
+                | "--cap-ease"
+                | "--torso-mm"
+                | "--hip-mm"
+                | "--hem-mm"
+                | "--sleeve-mm"
+        ) {
             index += 1;
             let value = args
                 .get(index)
@@ -39,11 +49,26 @@ fn main() -> Result<(), String> {
                 "--out" => out.clone_from(value),
                 "--fit" => draft_settings.fit = Fit::from_key(value)?,
                 "--style" => draft_settings.style = Style::from_key(value)?,
-                "--cap-ease" => draft_settings.target_cap_ease_mm = value.parse().map_err(|_| "Invalid target ease")?,
-                "--torso-mm" => draft_settings.alterations.torso_mm = value.parse().map_err(|_| "Invalid torso adjustment")?,
-                "--hip-mm" => draft_settings.alterations.hip_mm = value.parse().map_err(|_| "Invalid hip adjustment")?,
-                "--hem-mm" => draft_settings.alterations.hem_mm = value.parse().map_err(|_| "Invalid hem adjustment")?,
-                "--sleeve-mm" => draft_settings.alterations.sleeve_mm = value.parse().map_err(|_| "Invalid sleeve adjustment")?,
+                "--cap-ease" => {
+                    draft_settings.target_cap_ease_mm =
+                        value.parse().map_err(|_| "Invalid target ease")?
+                }
+                "--torso-mm" => {
+                    draft_settings.alterations.torso_mm =
+                        value.parse().map_err(|_| "Invalid torso adjustment")?
+                }
+                "--hip-mm" => {
+                    draft_settings.alterations.hip_mm =
+                        value.parse().map_err(|_| "Invalid hip adjustment")?
+                }
+                "--hem-mm" => {
+                    draft_settings.alterations.hem_mm =
+                        value.parse().map_err(|_| "Invalid hem adjustment")?
+                }
+                "--sleeve-mm" => {
+                    draft_settings.alterations.sleeve_mm =
+                        value.parse().map_err(|_| "Invalid sleeve adjustment")?
+                }
                 _ => {}
             }
         } else {
