@@ -183,7 +183,7 @@ function render(values={},allowance=null,density=null){
  const dx=50-Math.min(...xs),dy=55-Math.min(...ys);
  const width=Math.max(...xs)-Math.min(...xs)+160,height=Math.max(...ys)-Math.min(...ys)+160;
  const path=(pts,closed=false)=>"M "+pts.map((a,i)=>(i?"L ":"")+fmt(a[0])+" "+fmt(a[1])).join(" ")+(closed?" Z":"");
- const out=['<svg xmlns="http://www.w3.org/2000/svg" data-pattern="hood" data-source="muellerundsohn-public-dob" viewBox="0 0 '+fmt(width)+' '+fmt(height)+'" width="'+fmt(width)+'mm" height="'+fmt(height)+'mm">'];
+ const out=['<svg xmlns="http://www.w3.org/2000/svg" data-pattern="hood" data-pieces="2" data-source="muellerundsohn-public-dob" viewBox="0 0 '+fmt(width)+' '+fmt(height)+'" width="'+fmt(width)+'mm" height="'+fmt(height)+'mm">'];
  out.push('<metadata>Eigenständige numerische Interpretation öffentlich genannter Müller-&amp;-Sohn-Relationswerte. Quelle: '+svgText(SOURCE)+'</metadata>');
  out.push('<rect width="100%" height="100%" fill="#14202e"/>');
  out.push('<text x="28" y="22" fill="#edf7fc" font-size="15" font-weight="700">HOODLAB · KAPUZE · '+svgText(VARIANTS[v.variant].name.toUpperCase())+'</text>');
@@ -210,7 +210,7 @@ function render(values={},allowance=null,density=null){
  const baseY=height-31;
  out.push('<text x="30" y="'+fmt(baseY-33)+'" fill="#b5cbd5" font-size="10">Grün: Vorderhals · Gelb: Rückenhals · Rosa: Abnähermarkierung</text>');
  out.push('<text x="30" y="'+fmt(baseY-16)+'" fill="#dcebf2" font-size="10">H '+fmt(v.hoodHeight/10)+' cm · T '+fmt(v.hoodDepth/10)+' cm · Kopf '+fmt(v.headCirc/10)+' cm · 2× spiegeln</text>');
- out.push('<text x="30" y="'+fmt(baseY)+'" fill="#f1be99" font-size="10">KONZEPT · Nahtzugabe im Schnitt noch NICHT robust geometrisch versetzt</text>');
+ out.push('<text x="30" y="'+fmt(baseY)+'" fill="#f1be99" font-size="10">KONZEPT-GRUNDSCHNITT · Nahtzugabe nicht robust als Offset gezeichnet</text>');
  out.push('</svg>');
  return {...d,svg:out.join("\n")};
 }
