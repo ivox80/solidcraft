@@ -77,7 +77,7 @@ function modifyMeasurements(input={},opt={}) {
   const target=validateOptions(opt);
   const style=STYLES[opt.style||"bodice"];
   const fit=FITS[opt.fit||"regular"];
-  const raw={...input};
+  const raw={chest:100,waist:84,hip:102,shoulder:44,sleeve:62,ease:8,...B.defaults,...input};
   raw.ease=fit.ease;
   const changes={torso:style.torso,hip:0,hem:style.hem,sleeve:0,...(opt.alterations||{})};
   for(const [zone,amount] of Object.entries(changes)) {
