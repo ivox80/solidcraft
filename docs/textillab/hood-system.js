@@ -120,21 +120,21 @@ function seamCheck(actual,target,mode,max,description){
 }
 function draft(values={}){
  const v=parse(values),loose=v.variant==="relaxed";
- const height=v.hoodHeight,depth=v.hoodDepth+
-  (v.variant==="relaxed"?12:0);
+ const height=v.hoodHeight,depth=v.hoodDepth;
  const rearRaw=Math.max(1,v.backNeck-5); // M&S documented reference relation
  const rearCorrected=rearRaw+5; // independent seam-matching compensation
  const back=neckSegment([0,0],rearCorrected,"back");
  const front=neckSegment(back.end,v.frontNeck,"front");
  const bottom=[...back.points,...front.points.slice(1)];
- const forehead=point(depth+v.faceOverlap,-height*.73);
+ // Loose version: published 4–5 cm base-distance allowance influences opening curve.
+ const forehead=point(depth+v.faceOverlap,-height*.73+(loose?45*.15:0));
  const crown=point(depth*.42,-height);
  const mid=point(depth*.09,-height*.96);
  const rear=[0,0];
  const upperRear=sampleCubic(rear,[-depth*.10,-height*.43],[-depth*.08,-height*.88],crown,50);
  const upperFront=sampleCubic(crown,[depth*.72,-height*1.05],
     [depth*1.02,-height*.97],forehead,40);
- const frontEdge=sampleCubic(forehead,[depth*.99,-height*.49],
+ const frontEdge=sampleCubic(forehead,[depth*.99,-height*.49+(loose?45*.55:0)],
     [front.end[0]+depth*.13,-height*.19],front.end,35);
  const outer=[...upperRear,...upperFront.slice(1),
    ...frontEdge.slice(1),...bottom.slice(0,-1).reverse()];
