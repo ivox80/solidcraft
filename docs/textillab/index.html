@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>SolidCraft · TextilLab Studio</title>
+  <link rel="stylesheet" href="./style.css">
+  <script defer src="./app.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="brandmark">SC</div>
+    <div><strong>SolidCraft</strong><span> / TextilLab Studio</span></div>
+    <span class="tag">v0.4 · Preview</span>
+  </div>
+  <div class="topactions">
+    <span class="topnote">Online-Demo · Browser-Geometrie</span>
+    <button id="sampleBtn" class="btn soft">Demo laden</button>
+    <button id="exportBtn" class="btn primary" disabled>SVG exportieren</button>
+  </div>
+</header>
+<main class="workbench">
+  <aside class="sidebar">
+    <div class="sectiontitle">TEXTIL-PROJEKT</div>
+    <div class="section">
+      <label class="fieldlabel" for="objFile">3D-Oberfläche importieren</label>
+      <label class="fileinput" for="objFile">
+        <span class="fileicon">↑</span><strong>OBJ-Datei auswählen</strong>
+        <small>Dreiecke und Vierecke · max. 2 MB</small>
+      </label>
+      <input id="objFile" type="file" accept=".obj,text/plain" hidden>
+      <div class="filemeta" id="fileName">Beispieldatei wird geladen …</div>
+      <div class="fieldrow">
+        <label for="units">Modell-Einheit</label>
+        <select id="units">
+          <option value="mm" selected>Millimeter</option>
+          <option value="cm">Zentimeter</option>
+          <option value="m">Meter</option>
+        </select>
+      </div>
+    </div>
+    <div class="sectiontitle">MATERIAL & ZUSCHNITT</div>
+    <div class="section">
+      <label class="fieldlabel" for="material">Material (Beispielwerte)</label>
+      <select id="material" class="full">
+        <option value="210" selected>Nylon 420D · 210 g/m²</option>
+        <option value="350">Beschichtetes Gewebe · 350 g/m²</option>
+        <option value="150">Baumwolle · 150 g/m²</option>
+        <option value="custom">Benutzerdefiniert</option>
+      </select>
+      <div class="fieldrow gap-top">
+        <label for="density">Flächengewicht</label>
+        <div class="inputunit"><input id="density" type="number" value="210" min="1" max="5000" step="1"><span>g/m²</span></div>
+      </div>
+      <div class="fieldrow">
+        <label for="allowance">Nahtzugabe</label>
+        <div class="inputunit"><input id="allowance" type="number" value="10" min="0" max="200" step=".5"><span>mm</span></div>
+      </div>
+      <div class="hint">Die Materialdaten dienen zur überschlägigen Berechnung und sind nicht zertifiziert.</div>
+    </div>
+    <div class="sectiontitle">SCHNITTKANTEN</div>
+    <div class="section">
+      <p class="sidecopy">Klicke im 3D-Fenster auf eine <strong>innere Netzkante</strong>. Rot bedeutet: Hier wird die Stofffläche getrennt.</p>
+      <div class="fieldrow"><span>Aktive Trennkanten</span><strong id="seamCount">0</strong></div>
+      <div id="seamList" class="seamlist"><span class="muted">Noch keine</span></div>
+      <button id="clearBtn" class="btn full soft">Schnittkanten zurücksetzen</button>
+    </div>
+    <div class="sidebarbottom">Browser-Demo · keine Fertigungsvorlage</div>
+  </aside>
+  <div class="panes">
+    <section class="pane modelpane">
+      <div class="panelbar"><div><span class="panelid">01</span> 3D-Modell <span class="muted small">· Schnittlinien bearbeiten</span></div><button class="iconbutton" id="viewBtn" title="3D-Ansicht zurücksetzen">↻</button></div>
+      <div class="modelcontainer">
+        <canvas id="modelCanvas" aria-label="Interaktive 3D-Ansicht mit wählbaren Mesh-Kanten"></canvas>
+        <div class="viewhint">Ziehen: Drehen · Mausrad: Zoom · Klick auf Kante: Schnitt setzen</div>
+        <div class="axes">3D / MESH</div>
+      </div>
+      <div class="panefooter"><span id="meshStats">Keine Geometrie</span><span id="faceInfo">Kante wählen</span></div>
+    </section>
+    <section class="pane cutpane">
+      <div class="panelbar"><div><span class="panelid">02</span> 2D-Schnittmuster <span class="muted small">· automatische Abwicklung</span></div><span class="mini">SVG</span></div>
+      <div class="previewcontainer" id="previewContainer">
+        <div id="preview" class="preview">
+          <div class="placeholder">Schnittmuster wird berechnet …</div>
+        </div>
+        <div class="legend"><span><i class="legendcut"></i> Zuschnittkante</span><span><i class="legendsew"></i> Nahtlinie</span></div>
+      </div>
+      <div class="panefooter"><span>Maßstab: Modell-Einheiten → mm</span><span id="errorDetail"></span></div>
+    </section>
+  </div>
+  <aside class="inspector">
+    <div class="sectiontitle">ERGEBNISSE</div>
+    <div class="metric"><span>Schnittteile</span><strong id="pieces">–</strong></div>
+    <div class="metric"><span>Nahtfläche</span><strong id="sewnArea">–</strong><small>m²</small></div>
+    <div class="metric"><span>Zuschnittfläche</span><strong id="cutArea">–</strong><small>m²</small></div>
+    <div class="metric"><span>Stoffgewicht (ca.)</span><strong id="mass">–</strong><small>g</small></div>
+    <div class="sectiontitle withgap">HINWEISE</div>
+    <p class="inspectorcopy">Diese kostenlose Online-Vorschau verwendet eine JavaScript-Umsetzung der Kerngeometrie. Die installierbare TextilLab-Version berechnet mit Rust. Aktuell sind abwickelbare Dreiecksnetze und konvexe Zuschnittkonturen mit Nahtzugabe unterstützt.</p>
+    <p class="inspectorcopy">Doppelt gekrümmte Flächen benötigen später Dehnungsoptimierung und automatische Teilungsnähte.</p>
+  </aside>
+</main>
+<footer class="statusline"><span class="statusdot"></span><span id="status">Studio wird initialisiert …</span><span class="right">Online-Vorschau · lokal im Browser berechnet; kein Upload</span></footer>
+</body>
+</html>
