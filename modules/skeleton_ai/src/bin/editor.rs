@@ -3,6 +3,7 @@
 //! this server/editor is the integration-ready UI prototype, not a host plugin.
 use serde::{Deserialize, Serialize};
 use solidcraft_skeleton_ai::{generate_mesh, SkeletonDocument};
+use solidcraft_skeleton_ai::mechanics::{analyze, optimize};
 use std::{env, fs, io::{Read, Write}, net::{TcpListener, TcpStream}, path::PathBuf, sync::{Arc, Mutex}, time::Duration};
 
 const HTML: &str = include_str!("../../assets/editor.html");
@@ -95,6 +96,25 @@ fn handle(req:Request,shared:&Arc<Mutex<State>>,stream:&mut TcpStream,port:u16) 
             shared.lock().unwrap().document=doc;
             respond(stream,200,"application/json",br#"{"ok":true}"#,None)
         }
+        ("POST","/api/analyze") => {
+            if !guarded_write(&req,port){return failure(403,"Editor-Header/Origin fehlt".into(),stream);}
+            let state=shared.lock().unwrap().clone();
+            match analyze(&state.document){
+                Ok(report)=>respond(stream,200,"application/json",&serde_json::to_vec(&report).unwrap_or_default(),None),
+                Err(e)=>failure(422,e,stream)
+            }
+        }
+        ("POST","/api/optimize") => {
+            if !guarded_write(&req,port){return failure(403,"Editor-Header/Origin fehlt".into(),stream);}
+            let state=shared.lock().unwrap().clone();
+            // Optimization is a proposal; the frontend applies it by POST /api/state.
+            let iterations=serde_json::from_slice::<serde_json::Value>(&req.body).ok()
+                .and_then(|v|v.get("iterations").and_then(|x|x.as_u64())).unwrap_or(12).min(40) as usize;
+            match optimize(&state.document,iterations){
+                Ok(report)=>respond(stream,200,"application/json",&serde_json::to_vec(&report).unwrap_or_default(),None),
+                Err(e)=>failure(422,e,stream)
+            }
+        }
         ("GET","/api/mesh") => {
             let res=parse_resolution(&req.uri,34);
             let state=shared.lock().unwrap().clone();
@@ -134,7 +154,7 @@ fn handle(req:Request,shared:&Arc<Mutex<State>>,stream:&mut TcpStream,port:u16) 
     }
 }
 fn run()->Result<(),String>{
-    let mut input=PathBuf::from("examples/two_sided_profiles.json");
+    let mut input=PathBuf::from("examples/force_optimization_demo.json");
     let mut port=8765_u16;let mut check=false;
     let mut args=env::args().skip(1);
     while let Some(arg)=args.next(){match arg.as_str(){
@@ -175,6 +195,13 @@ fn main(){if let Err(e)=run(){eprintln!("skeleton-editor: {e}");std::process::ex
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn analysis_endpoints_are_configured(){
+        let doc:SkeletonDocument=serde_json::from_str(include_str!("../../examples/force_optimization_demo.json")).unwrap();
+        assert!(analyze(&doc).unwrap().max_displacement_m>0.0);
+        let result=optimize(&doc,5).unwrap();
+        assert!(result.after.compliance_j<=result.before.compliance_j*1.000001);
+    }
     #[test]
     fn example_stations_can_be_changed_at_both_ends(){
         let doc:SkeletonDocument=serde_json::from_str(include_str!("../../examples/two_sided_profiles.json")).unwrap();
