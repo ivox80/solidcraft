@@ -41,7 +41,7 @@
          spec.materialStretchVerified!==true)
         throw Error("Dehnen erfordert einen geprüften Materialwert und eine Maximaldehnung.");
       const pct=(b-a)/a*100;
-      status=a<b && pct<=maxPct;
+      status=a<b && pct<=maxPct+1e-8; // FP tolerance for exact percent boundary
       reason="Naht A wird auf B gedehnt; erforderliche Dehnung "+pct.toFixed(1)+" %.";
     }else{
       throw Error("Nicht unterstützte Nahtverarbeitung: "+mode);
