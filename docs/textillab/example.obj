@@ -1,0 +1,8 @@
+# Two triangular cloth sections sharing the 1:3 diagonal.
+# Units are millimetres.
+v 0 0 0
+v 120 0 0
+v 120 80 0
+v 0 80 35
+f 1 2 3
+f 1 3 4
