@@ -95,7 +95,7 @@ function gloveOutline(v) {
    quad(a,p(x0+2,yt+5),p((x0+x1)*.5,yt-12),p(x1-2,yt+5),5);
    if(i<3) a.push(p(x1-1,valley));
  }
- a.push(p(w,h),p(0,h));
+ a.push(p(w,h));
  return a;
 }
 function beanie(v) {
