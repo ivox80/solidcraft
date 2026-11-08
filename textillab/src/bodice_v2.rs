@@ -522,7 +522,10 @@ mod tests {
         ] {
             assert!(result.svg.contains(label), "{label}");
         }
-        assert_eq!(result.pieces_to_cut, 2);
+        assert_eq!(result.pieces_to_cut, 4);
+        assert_eq!(result.parts.len(), 3);
+        assert!(result.svg.contains("data-sleeves=\\\"2\\\""));
+        assert!(result.svg.contains("#14202e"));
         assert!(result.cut_area_mm2 > result.sewn_area_mm2);
     }
     #[test]
@@ -534,6 +537,22 @@ mod tests {
         let second = export(m, 10.0, 210.0).unwrap();
         assert!(second.cut_area_mm2 > first.cut_area_mm2);
         assert_ne!(first.svg, second.svg);
+    }
+    #[test]
+    fn sleeves_are_included_and_react_to_user_measurements() {
+        let default_measurements = Measurements::default();
+        let sleeve = draft_sleeve(default_measurements).unwrap();
+        assert_eq!(sleeve.piece.copies, 2);
+        assert!(sleeve.piece.outline.len() > 70);
+        assert!(sleeve.svg_path.matches(" C ").count() >= 4);
+        assert_eq!(draft_parts(default_measurements).unwrap().len(), 3);
+        let mut changed = default_measurements;
+        changed.set_cm("sleeve", 70.0).unwrap();
+        changed.set_cm("upperArm", 39.0).unwrap();
+        changed.set_cm("wrist", 21.0).unwrap();
+        assert_ne!(sleeve.piece.outline, draft_sleeve(changed).unwrap().piece.outline);
+        assert!(export(changed, 10.0, 210.0).unwrap().cut_area_mm2
+            > export(default_measurements, 10.0, 210.0).unwrap().cut_area_mm2);
     }
     #[test]
     fn invalid_bodice_measurements_rejected() {
