@@ -214,7 +214,7 @@ function techPiece(piece,dx,mirror,allowance){
   const transform='translate('+fmt(tx)+' 0)'+(mirror?' scale(-1 1)':'');
   const out=[];
   const contour=convexLikeOffset(piece.outline,allowance);
-  out.push('<g transform="'+transform+'">');
+  out.push('<g transform="'+transform+'" data-piece-id="'+(mirror?'RT':'VT')+'">');
   out.push('<path d="'+piece.svgPath+'" fill="#264554" fill-opacity="0.22" stroke="#75d3d6" stroke-dasharray="4 2" stroke-width="1.4" stroke-linejoin="round"/>');
   if(allowance>0)out.push(svgPoly(contour,"#efa16f",'stroke-width="1.6" stroke-linejoin="round"'));
   const D=piece.darts.waist;
