@@ -196,7 +196,6 @@ pub fn draft(m: Measurements) -> Result<Vec<BodicePanel>, String> {
     Ok(vec![draft_panel(m, true), draft_panel(m, false)])
 }
 
-
 #[derive(Clone, Debug)]
 pub struct SleevePanel {
     pub piece: Piece,
@@ -280,12 +279,7 @@ pub fn draft_parts(m: Measurements) -> Result<Vec<Piece>, String> {
     Ok(result)
 }
 
-fn render_sleeve(
-    sleeve: &SleevePanel,
-    dx: f64,
-    dy: f64,
-    seam_mm: f64,
-) -> Result<String, String> {
+fn render_sleeve(sleeve: &SleevePanel, dx: f64, dy: f64, seam_mm: f64) -> Result<String, String> {
     let mut s = format!("<g transform=\"translate({dx:.3} {dy:.3})\">\n");
     let _ = writeln!(
         s,
@@ -332,7 +326,7 @@ fn render_sleeve(
         "<text x=\"{center:.3}\" y=\"{:.3}\" text-anchor=\"middle\" font-size=\"22\" font-weight=\"700\" fill=\"#dcebf3\">ÄR</text>",
         sleeve.cuff_y - 22.0
     );
-    let middle = (sleeve.cap_y + sleeve.cuff_y)*0.5;
+    let middle = (sleeve.cap_y + sleeve.cuff_y) * 0.5;
     let tag_x = center + 24.0;
     let _ = writeln!(
         s,
@@ -369,7 +363,11 @@ fn render_panel(
     let _=writeln!(s,"<path d=\"{}\" fill=\"#264554\" fill-opacity=\"0.22\" stroke=\"#75d3d6\" stroke-dasharray=\"4 2\" stroke-width=\"1.4\" stroke-linejoin=\"round\"/>",panel.svg_path);
     if seam_mm > 0.0 {
         let cut = offset(&panel.piece.outline, seam_mm)?;
-        let _=writeln!(s,"<polygon fill=\"none\" stroke=\"#efa16f\" stroke-width=\"1.6\" points=\"{}\"/>",svg_points(&cut));
+        let _ = writeln!(
+            s,
+            "<polygon fill=\"none\" stroke=\"#efa16f\" stroke-width=\"1.6\" points=\"{}\"/>",
+            svg_points(&cut)
+        );
     }
     let _ = writeln!(
         s,
@@ -416,23 +414,37 @@ pub fn export(m: Measurements, seam_mm: f64, density_g_m2: f64) -> Result<Garmen
     }
     let panels = draft(m)?;
     let sleeve = draft_sleeve(m)?;
-    let front_width = panels[0].piece.outline.iter().map(|p| p.x).fold(0.0, f64::max);
-    let back_width = panels[1].piece.outline.iter().map(|p| p.x).fold(0.0, f64::max);
+    let front_width = panels[0]
+        .piece
+        .outline
+        .iter()
+        .map(|p| p.x)
+        .fold(0.0, f64::max);
+    let back_width = panels[1]
+        .piece
+        .outline
+        .iter()
+        .map(|p| p.x)
+        .fold(0.0, f64::max);
     let front_dx = 75.0;
     let back_dx = front_dx + front_width + 100.0;
     let sleeve_dx = back_dx + back_width + 100.0;
     let sleeve_dy = 95.0;
     let sleeve_width = sleeve.piece.outline.iter().map(|p| p.x).fold(0.0, f64::max);
     let width = sleeve_dx + sleeve_width + 95.0;
-    let height = panels.iter().map(|p| p.hem_y).fold(sleeve.cuff_y + sleeve_dy, f64::max) + 90.0;
+    let height = panels
+        .iter()
+        .map(|p| p.hem_y)
+        .fold(sleeve.cuff_y + sleeve_dy, f64::max)
+        + 90.0;
     let mut sewn = 0.0;
     let mut cut = 0.0;
     for panel in &panels {
         sewn += area(&panel.piece.outline).abs();
         cut += area(&offset(&panel.piece.outline, seam_mm)?).abs();
     }
-    sewn += 2.0*area(&sleeve.piece.outline).abs();
-    cut += 2.0*area(&offset(&sleeve.piece.outline, seam_mm)?).abs();
+    sewn += 2.0 * area(&sleeve.piece.outline).abs();
+    cut += 2.0 * area(&offset(&sleeve.piece.outline, seam_mm)?).abs();
     let mass = cut * density_g_m2 / 1_000_000.0;
     let mut svg=format!(
         "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{width:.3}mm\" height=\"{height:.3}mm\" viewBox=\"0 0 {width:.3} {height:.3}\" data-bodice-version=\"2\" data-pieces=\"4\" data-sleeves=\"2\" data-sewn-area=\"{sewn:.3}\" data-cut-area=\"{cut:.3}\" data-mass=\"{mass:.3}\">\n"
@@ -452,8 +464,8 @@ pub fn export(m: Measurements, seam_mm: f64, density_g_m2: f64) -> Result<Garmen
         let _ = writeln!(
             svg,
             "<text x=\"{:.3}\" y=\"{:.3}\" font-size=\"12\" fill=\"#a3b9c9\">{label}</text>",
-            back_dx+back_width+29.0,
-            y-6.0
+            back_dx + back_width + 29.0,
+            y - 6.0
         );
     }
     svg.push_str(&render_panel(&panels[0], front_dx, false, seam_mm)?);
@@ -550,9 +562,16 @@ mod tests {
         changed.set_cm("sleeve", 70.0).unwrap();
         changed.set_cm("upperArm", 39.0).unwrap();
         changed.set_cm("wrist", 21.0).unwrap();
-        assert_ne!(sleeve.piece.outline, draft_sleeve(changed).unwrap().piece.outline);
-        assert!(export(changed, 10.0, 210.0).unwrap().cut_area_mm2
-            > export(default_measurements, 10.0, 210.0).unwrap().cut_area_mm2);
+        assert_ne!(
+            sleeve.piece.outline,
+            draft_sleeve(changed).unwrap().piece.outline
+        );
+        assert!(
+            export(changed, 10.0, 210.0).unwrap().cut_area_mm2
+                > export(default_measurements, 10.0, 210.0)
+                    .unwrap()
+                    .cut_area_mm2
+        );
     }
     #[test]
     fn invalid_bodice_measurements_rejected() {
