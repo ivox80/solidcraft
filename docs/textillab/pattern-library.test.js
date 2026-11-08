@@ -4,10 +4,10 @@ const assert=require("node:assert/strict");
 const lib=require("./pattern-library.js");
 
 test("every garment category produces labeled panels, meaningful SVG and plausible area",()=>{
-  assert.equal(lib.types.length,7);
+  assert.equal(lib.types.length,8);
   for(const [type] of lib.types) {
     const a=lib.render(type,{},10,210);
-    assert.ok(a.parts.length>=2,type);
+    assert.ok(a.parts.length>=(type==="hood"?1:2),type);
     assert.ok(a.pieces>=2,type);
     assert.match(a.svg,/data-pieces="\d+"/);
     assert.match(a.svg,/KONZEPT-GRUNDSCHNITT/);
@@ -21,6 +21,7 @@ test("templates react to relevant measurements",()=>{
   const combinations=[
     ["top",{chest:100},{chest:115}],
     ["jacket",{chest:100},{chest:115}],
+    ["hood",{hoodDepth:27},{hoodDepth:31}],
     ["trousers",{hip:102},{hip:120}],
     ["glove",{hand:22,handLength:19},{hand:25,handLength:22}],
     ["beanie",{head:57},{head:62}],

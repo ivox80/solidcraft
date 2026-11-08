@@ -10,6 +10,8 @@
   <script defer src="./bodice-v2.js"></script>
   <script defer src="./pants-system.js"></script>
   <script defer src="./ruleset-registry.js"></script>
+  <script defer src="./hood-system.js"></script>
+  <script defer src="./garment-3d.js"></script>
   <script defer src="./pattern-library.js"></script>
   <script defer src="./drafting-system.js"></script>
   <script defer src="./app.js"></script>
@@ -20,7 +22,7 @@
   <div class="brand">
     <div class="brandmark">SC</div>
     <div><strong>SolidCraft</strong><span> / TextilLab Schnittatelier</span></div>
-    <span class="tag">v1.2 · Grafisches Schnittatelier</span>
+    <span class="tag">v1.3 · HoodLab + 3D</span>
   </div>
   <div class="topactions">
     <span class="topnote">Online-Demo · Browser-Geometrie</span>
@@ -45,6 +47,7 @@
       <select id="templateType" class="full">
         <option value="top">Oberteil – VT / RT + Ärmel</option>
         <option value="jacket">Jacke</option>
+        <option value="hood">Kapuze – parametrisch</option>
         <option value="trousers">Hose – Vorder-/Hinterhose v2</option>
         <option value="glove">Handschuh</option>
         <option value="beanie">Mütze</option>
@@ -70,7 +73,48 @@
     </div>
     
 
-    <div class="pants-only pants-setup">
+    <div class="hood-only hood-setup" id="hoodPanel">
+ <div class="sectiontitle">HOODLAB · KAPUZENKONSTRUKTION</div>
+ <div class="section">
+  <label class="fieldlabel" for="hoodVariant">Kapuzenvariante</label>
+  <select id="hoodVariant" class="full">
+   <option value="close">Anliegend · DOB-Zahlenreferenz</option>
+   <option value="relaxed">Aufgelockert · DOB-Zahlenreferenz</option>
+   <option value="dartless">Abnäherlos · vereinfachter Entwurf</option>
+  </select>
+  <label class="fieldlabel gap-top" for="hoodProfile">Konstruktionsprofil</label>
+  <select id="hoodProfile" class="full">
+   <option value="women">Damen · DOB</option>
+   <option value="men">Herren · HAKA (noch nicht geprüft)</option>
+   <option value="child">Kinder (noch nicht geprüft)</option>
+  </select>
+  <p class="hint">Fachliche Zahlenbezüge: <a href="https://www.muellerundsohn.com/allgemein/schnittkonstruktion-kapuze/" target="_blank" rel="noopener noreferrer">Müller &amp; Sohn – Kapuzenkonstruktion</a>. Die Bézier-Konturen und 3D-Form sind eigenständige Näherungen.</p>
+  <details class="measure-details" open><summary>Kapuzen- und Halsmaße <span>(cm)</span></summary>
+   <div class="measure-grid">
+    <label class="measure-input"><span>Kopfumfang</span><input id="h-headCirc" type="number" step=".5" min="36" max="70" value="57"></label>
+    <label class="measure-input"><span>Halsloch hinten</span><input id="h-backNeck" type="number" step=".5" min="5" max="25" value="10"></label>
+    <label class="measure-input"><span>Halsloch vorne</span><input id="h-frontNeck" type="number" step=".5" min="5" max="25" value="12"></label>
+    <label class="measure-input"><span>Halsspiegelbreite</span><input id="h-neckWidth" type="number" step=".5" min="3" max="15" value="8"></label>
+    <label class="measure-input"><span>Halslochvertiefung</span><input id="h-frontNeckDrop" type="number" step=".5" min="0" max="14" value="5"></label>
+    <label class="measure-input"><span>Kapuzenhöhe</span><input id="h-hoodHeight" type="number" step=".5" min="22" max="45" value="32"></label>
+    <label class="measure-input"><span>Kapuzentiefe</span><input id="h-hoodDepth" type="number" step=".5" min="18" max="42" value="27"></label>
+    <label class="measure-input"><span>Abnäherreserve</span><input id="h-dartIntake" type="number" step=".5" min="0" max="7" value="3.5"></label>
+    <label class="measure-input"><span>Übertritt</span><input id="h-faceOverlap" type="number" step=".5" min="0" max="5" value="0"></label>
+   </div>
+  </details>
+  <div class="fieldrow gap-top"><label for="hoodJoinMode">Naht-Verbindung</label>
+   <select id="hoodJoinMode"><option value="match">Gleich lang</option><option value="stretch">Gezielt dehnen</option><option value="ease">Gezielt einhalten</option></select>
+  </div>
+  <div class="fieldrow"><label for="hoodAllowedEase">Zulässige Differenz</label>
+   <div class="inputunit"><input id="hoodAllowedEase" type="number" value=".5" step=".1" min="0" max="4"><span>cm</span></div>
+  </div>
+ </div>
+ <div class="sectiontitle">KONSTRUKTIONSREGELN UND NAHTKONTROLLE</div>
+ <div class="section" id="hoodRuleReport" aria-live="polite"></div>
+ <div class="section"><p class="hint" id="hoodSourceNote">Damenwerte teilweise öffentlich dokumentiert. Kein geprüftes Serien-Schnittsystem.</p></div>
+</div>
+
+<div class="pants-only pants-setup">
   <div class="sectiontitle">HOSENSCHNITT · REGELBASIERT</div>
   <div class="section">
     <label class="fieldlabel" for="pantsMethod">Konstruktionssystem</label>
@@ -201,6 +245,13 @@
       <div class="panelbar"><div><span class="panelid">01</span> <span id="modelPanelTitle">Grundschnitt-Bibliothek</span></div><button class="iconbutton" id="viewBtn" title="3D-Ansicht zurücksetzen">↻</button></div>
       <div class="modelcontainer">
         <div id="libraryInfo" class="library-overview" aria-live="polite"></div>
+        <canvas id="garmentCanvas" class="garment3d-canvas" aria-label="Drehbare 3D-Kleidungsansicht"></canvas>
+        <div class="garment3d-tools" id="garment3dTools">
+          <button id="garmentWire" type="button" aria-pressed="false" title="Drahtgitter an/aus">Draht</button>
+          <button id="garmentBody" type="button" aria-pressed="true" title="Kopf-Referenz an/aus">Körper</button>
+          <button id="garmentReset" type="button" title="3D-Ansicht zurücksetzen">Ansicht</button>
+          <button id="garmentObj" type="button" title="Schematisches 3D-Modell als OBJ exportieren">OBJ</button>
+        </div>
         <canvas id="modelCanvas" aria-label="Interaktive 3D-Ansicht mit wählbaren Mesh-Kanten"></canvas>
         <div class="viewhint">Ziehen: Drehen · Mausrad: Zoom · Klick auf Kante: Schnitt setzen</div>
         <div class="axes">3D / MESH</div>

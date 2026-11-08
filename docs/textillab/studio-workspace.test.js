@@ -10,7 +10,7 @@ const html=fs.readFileSync(path.join(__dirname,"index.html"),"utf8");
 
 test("gallery offers every supported pattern type and clear workflow destinations",()=>{
  assert.deepEqual(ui.types.map(x=>x[0]),
-   ["top","jacket","trousers","skirt","glove","beanie","hat","mesh"]);
+   ["top","jacket","hood","trousers","skirt","glove","beanie","hat","mesh"]);
  for(const id of ui.types.map(x=>x[0]))
    assert.ok(html.includes('<option value="'+id+'">'),id);
  for(const stage of ["template","measure","construction","check"])
@@ -41,6 +41,7 @@ test("garment plot emits selectable piece identifiers matching cards",()=>{
  assert.equal(ui.partCode("trousers",0),"VH");
  assert.equal(ui.partCode("trousers",1),"HH");
  assert.equal(ui.partCode("top",2),"AR");
+ assert.equal(ui.partCode("hood",0),"HOOD");
 });
 test("source comparison links to official public pattern not a pretend copy",()=>{
  assert.ok(html.includes("https://www.muellerundsohn.com/allgemein/schnittmuster-grundschnitt-hose-und-bundfaltenhose/"));

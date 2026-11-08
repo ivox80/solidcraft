@@ -158,3 +158,58 @@ html,body{min-width:320px}
  .measure-grid{gap:7px}
  .statusline .right{display:none}
 }
+
+/* HoodLab 1.3 and genuine interactive canvas-backed 3D schematic preview */
+.hood-only{display:none}
+.hood-mode .hood-only{display:block}
+.hood-setup .sectiontitle{color:#7fd7df}
+.hood-setup .measure-grid{grid-template-columns:1fr 1fr}
+.hood-setup .measure-input{padding:8px 6px}
+.hood-setup .hint a{color:#8de1e9;text-decoration:underline}
+.hood-setup #hoodRuleReport .rule-line{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;border-bottom:1px solid #365165;padding:6px 2px}
+.hood-setup #hoodRuleReport .rule-line strong{font-size:10.8px;color:#c7dce8;font-weight:600;min-width:90px}
+.hood-setup #hoodRuleReport .rule-line span{font-size:10.5px;color:#8eabbc;text-align:right;font-variant-numeric:tabular-nums}
+.hood-setup .draft-check{border:1px solid #4a9b90;border-radius:7px;background:#1b3c43;padding:10px;font-size:11px;color:#a8ecda}
+.hood-setup .draft-check.warning{border-color:#db966b;color:#f8bd96}
+.hood-rule-details{margin:12px 0;border:1px solid #344f61;border-radius:6px;padding:8px;background:#152635}
+.hood-rule-details summary{font-size:11px;font-weight:700;color:#a8d7e5;cursor:pointer}
+.hood-rule-details[open] summary{padding-bottom:8px}
+.garment3d-canvas{display:none;width:100%;height:100%;position:absolute;inset:0;z-index:1;touch-action:none;cursor:grab}
+.garment3d-canvas:active{cursor:grabbing}
+.garment3d-tools{display:none;position:absolute;top:10px;right:10px;z-index:6;gap:5px}
+.garment3d-tools button{border:1px solid #456779;border-radius:7px;padding:6px 8px;color:#cde9ef;background:#102835dc;font-size:10px}
+.garment3d-tools button:hover,.garment3d-tools button.is-active{border-color:#8ae4e6;background:#255463;color:white}
+.library-mode.garment-mode .panes{grid-template-columns:minmax(330px,.48fr) minmax(0,.52fr)}
+.library-mode.garment-mode .modelpane{min-width:0}
+.library-mode.garment-mode #garmentCanvas{display:block}
+.library-mode.garment-mode #modelCanvas{display:none!important}
+.library-mode.garment-mode #garment3dTools{display:flex}
+.library-mode.garment-mode #libraryInfo{
+ position:absolute;inset:auto 10px 10px 10px;width:calc(100% - 20px);
+ height:32%;min-height:90px;overflow:auto;z-index:5;display:block;
+ background:#0e1c2bee;backdrop-filter:blur(5px);
+ border:1px solid #3d6072;border-radius:10px;padding:10px
+}
+.library-mode.garment-mode #libraryInfo .title{font-size:13px;margin-bottom:4px}
+.library-mode.garment-mode #libraryInfo .smallhint{display:none}
+.library-mode.garment-mode #libraryInfo .piece{padding:5px 7px;margin:3px 0;gap:8px;border-radius:6px}
+.library-mode.garment-mode #libraryInfo .piece strong{font-size:10px}
+.library-mode.garment-mode #libraryInfo .piece span{font-size:9.5px}
+.library-mode.garment-mode #libraryInfo .piece-thumb{height:46px;width:38px;flex-basis:38px}
+.library-mode.garment-mode #libraryInfo .caution{font-size:9px;padding:5px;margin:6px 0}
+.library-mode.garment-mode .modelcontainer{background:#112435}
+.library-mode.garment-mode .axes{display:block!important;right:auto;left:12px;top:10px;color:#b0d7e1;z-index:4}
+.library-mode.garment-mode .viewhint{display:none!important}
+.hood-mode #libraryInfo .piece strong{color:#ccf1f4}
+#hoodSourceNote{color:#a8c1ce;line-height:1.6}
+@media(max-width:975px){
+ .library-mode.garment-mode .panes{display:flex!important;flex-direction:column}
+ .library-mode.garment-mode .modelpane{height:420px;min-height:360px!important;max-height:none}
+ .library-mode.garment-mode #libraryInfo{height:110px;bottom:5px}
+ .hood-setup .measure-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:500px){
+ .garment3d-tools{gap:3px}
+ .garment3d-tools button{padding:5px;font-size:9px}
+ .library-mode.garment-mode .modelpane{height:330px;min-height:300px!important}
+}
