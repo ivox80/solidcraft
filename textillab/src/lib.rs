@@ -300,3 +300,6 @@ pub mod drafting_rules;
 
 /// Measurement-driven trousers draft with traceable experimental rule records.
 pub mod pants_rules;
+
+/// Native two-piece hood drafting with profile-safe sewing-line checks.
+pub mod hood_rules;
