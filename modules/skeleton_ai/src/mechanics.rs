@@ -71,15 +71,15 @@ fn section_props(s:&Station)->Result<Props,String>{
         Shape::Rectangle | Shape::RoundedRectangle=>{
             let (b,t)=(w.max(h),w.min(h));
             let j=b*t.powi(3)/3.0*(1.0-0.63*t/b+0.052*(t/b).powi(5));
-            let factor=if s.profile==Shape::RoundedRectangle {1.0-(4.0-PI)*(.5*s.corner*.95).powi(2)}else{1.0};
+            let factor=if s.profile==Shape::RoundedRectangle {1.0-(4.0-PI)*(0.5*s.corner*0.95).powi(2)}else{1.0};
             (w*h*factor,w*h.powi(3)*factor/12.0,h*w.powi(3)*factor/12.0,j*factor)
         },
         // Early-prototype equivalent-section approximations, not validated torsion constants.
-        Shape::Hexagon=>(.75*w*h,.75*w*h.powi(3)/12.0,.75*h*w.powi(3)/12.0,.15*w*h*(w.min(h)).powi(2)),
-        Shape::Triangle=>(.5*w*h,w*h.powi(3)/36.0,h*w.powi(3)/48.0,.03*w*h*(w.min(h)).powi(2)),
+        Shape::Hexagon=>(0.75*w*h,0.75*w*h.powi(3)/12.0,0.75*h*w.powi(3)/12.0,0.15*w*h*(w.min(h)).powi(2)),
+        Shape::Triangle=>(0.5*w*h,w*h.powi(3)/36.0,h*w.powi(3)/48.0,0.03*w*h*(w.min(h)).powi(2)),
         Shape::IBeam=>{
-            let flange=(s.wall*h/2.0).min(h*.45);
-            let stem=(s.wall*w/2.0).min(w*.45);
+            let flange=(s.wall*h/2.0).min(h*0.45);
+            let stem=(s.wall*w/2.0).min(w*0.45);
             let a=2.0*w*flange+(h-2.0*flange)*2.0*stem;
             let iy=(w*h.powi(3)-(w-2.0*stem)*(h-2.0*flange).powi(3))/12.0;
             let iz=(2.0*flange*w.powi(3)+(h-2.0*flange)*(2.0*stem).powi(3))/12.0;
@@ -102,7 +102,7 @@ fn equivalent_props(stations:&[Station])->Result<Props,String>{
     // Harmonic integration approximates a non-prismatic member using its
     // axial/bending/torsion flexibilities. This is a surrogate, NOT a true tapered-element FEM.
     let n=9usize;let mut inv=[0.0;4];
-    for i in 0..n {let p=props_at(stations,(i as f64+.5)/(n as f64))?;
+    for i in 0..n {let p=props_at(stations,(i as f64+0.5)/(n as f64))?;
         for (k,v) in [p.a,p.iy,p.iz,p.j].iter().enumerate(){inv[k]+=1.0/v/(n as f64)} }
     Ok(Props{a:1.0/inv[0],iy:1.0/inv[1],iz:1.0/inv[2],j:1.0/inv[3]})
 }
@@ -129,7 +129,7 @@ fn make_elements(doc:&SkeletonDocument)->Result<Vec<Element>,String>{
     for (index,&[i,j]) in doc.edges.iter().enumerate(){
         if !doc.active.get(index).copied().unwrap_or(true)||doc.areas[index]<=0.0{continue;}
         let a=V3::from_array(doc.nodes[i]);let b=V3::from_array(doc.nodes[j]);
-        let ex=b.sub(a).unit();let ref_axis=if ex.2.abs()>.95 {V3(0.0,1.0,0.0)}else{V3(0.0,0.0,1.0)};
+        let ex=b.sub(a).unit();let ref_axis=if ex.2.abs()>0.95 {V3(0.0,1.0,0.0)}else{V3(0.0,0.0,1.0)};
         let ey=ref_axis.cross(ex).unit();let ez=ex.cross(ey);
         let stations=&skeleton.beams[active_offset].sections;
         active_offset+=1;
@@ -171,7 +171,7 @@ fn solve_spd(mut k:Vec<f64>,mut f:Vec<f64>)->Result<Vec<f64>,String>{
 struct SolveInternal {report:AnalysisReport,elements:Vec<Element>,u:Vec<f64>,e:f64,g:f64}
 fn solve(doc:&SkeletonDocument,scales:&[f64])->Result<SolveInternal,String>{
     let m=doc.mechanics.as_ref().ok_or("No mechanical setup: add a support and a load")?;
-    if !m.material.young_pa.is_finite()||m.material.young_pa<=0.0 || !(-.99..0.5).contains(&m.material.poisson)
+    if !m.material.young_pa.is_finite()||m.material.young_pa<=0.0 || !(-0.99..0.5).contains(&m.material.poisson)
         || !m.material.density_kg_m3.is_finite()||m.material.density_kg_m3<=0.0{return Err("invalid material".into());}
     let n=doc.nodes.len();if n>128{return Err("prototype solver supports at most 128 nodes".into());}
     let e=m.material.young_pa;let g=e/(2.0*(1.0+m.material.poisson));
@@ -253,7 +253,7 @@ pub fn optimize(doc:&SkeletonDocument,iterations:usize)->Result<OptimizationResu
     let mut best=solve(doc,&scales)?;let mut accepted=0;
     for _ in 0..iterations {
         let sens=sensitivities(&best,&scales);
-        let mut low=1e-30;let mut high=1e30;let mut next=scales.clone();
+        let mut low: f64=1e-30;let mut high: f64=1e30;let mut next=scales.clone();
         for _ in 0..80 {
             let lambda=(low*high).sqrt();let mut volume=0.0;
             for beam in &best.elements {
