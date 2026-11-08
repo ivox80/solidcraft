@@ -219,7 +219,7 @@
     lines.push('<text x="35" y="43" fill="#9db4c5" font-size="11">Türkis: Naht · Orange: Zuschnitt · Gelb: Fadenlauf · Rosa: Abnäher</text>');
     for(const s of spans){
       const p=s.part,ox=x-s.minx,oy=65-s.miny;
-      lines.push('<g transform="translate('+fmt(ox)+' '+fmt(oy)+')">');
+      lines.push('<g transform="translate('+fmt(ox)+' '+fmt(oy)+')" data-piece-id="'+p.id+'">');
       lines.push('<path d="'+p.svgPath+'" fill="#264554" fill-opacity=".36" stroke="#7cdae1" stroke-width="1.7" stroke-dasharray="4 3" stroke-linejoin="round"/>');
       if(mm>0)lines.push('<polygon points="'+ptString(s.o)+'" fill="none" stroke="#f4a670" stroke-width="1.15" stroke-linejoin="round"/>');
       const extremes=[Math.min(...p.outline.map(v=>v[0])),Math.max(...p.outline.map(v=>v[0]))];
