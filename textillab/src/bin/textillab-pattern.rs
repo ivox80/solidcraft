@@ -5,6 +5,7 @@ use std::fs;
 use std::path::Path;
 use textillab::drafting_rules::{self, Fit, Settings, Style};
 use textillab::garments::{export_svg, Garment, Measurements};
+use textillab::pants_rules::{self, PantsMeasures};
 
 fn main() -> Result<(), String> {
     let args: Vec<String> = env::args().skip(1).collect();
@@ -13,6 +14,7 @@ fn main() -> Result<(), String> {
             "Usage: textillab-pattern <top|jacket|trousers|glove|beanie|hat|skirt> [measure_cm=value] [--allowance mm] [--density g/m2] [--out file.svg]\n\\
              Bodice v1.0 options: --fit fitted|regular|comfort|loose|oversize|custom, --style bodice|shirt|blouse|jacket|coat|sleeveless, --cap-ease mm, --torso-mm d, --hip-mm d, --hem-mm d, --sleeve-mm d\n\
              Measurements: chest waist hip back shoulder sleeve inseam head hand handLength ease.\n\
+             Pants: waist hip inseam outseam crotchDepth waistToHip waistToKnee thigh knee hem hipEase waistEase dartIntake crotchExtension (all cm).\n\
              Example: textillab-pattern trousers hip=110 waist=88 inseam=82 --allowance 10 --out trousers.svg\n\
              CAUTION: Concept pattern; fit, grading and sewing are not validated."
         );
@@ -20,6 +22,7 @@ fn main() -> Result<(), String> {
     }
     let garment: Garment = args[0].parse()?;
     let mut measures = Measurements::default();
+    let mut pants = PantsMeasures::default();
     let (mut allowance, mut density) = (10.0, 210.0);
     let mut draft_settings = Settings::default();
     let mut out = format!("{}-block.svg", garment.name());
@@ -78,7 +81,11 @@ fn main() -> Result<(), String> {
             let cm: f64 = value
                 .parse()
                 .map_err(|_| format!("Invalid value for {name}"))?;
-            measures.set_cm(name, cm)?;
+            if garment == Garment::Trousers {
+                pants.set_cm(name, cm)?;
+            } else {
+                measures.set_cm(name, cm)?;
+            }
         }
         index += 1;
     }
@@ -94,6 +101,13 @@ fn main() -> Result<(), String> {
             eprintln!("WARNING: Target sleeve ease is out of the permitted cap-height range");
         }
         drafted.pattern
+    } else if garment == Garment::Trousers {
+        let drafted = pants_rules::draft(pants)?;
+        println!(
+            "TextilLab experimental pants | Side seam delta {:.2} mm | Inseam delta {:.2} mm | 10 construction rules",
+            drafted.checks.side_diff_mm, drafted.checks.inseam_diff_mm
+        );
+        pants_rules::export(pants, allowance, density)?
     } else {
         export_svg(garment, measures, allowance, density)?
     };

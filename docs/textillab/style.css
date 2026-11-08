@@ -73,3 +73,19 @@ select.full,.btn.full{width:100%}.inputunit{display:flex;align-items:center;gap:
 .bodice-v2-mode .previewcontainer .legend{background:#14202ee0}
 .v1-help{font-size:11px;color:#99abbc;margin-top:7px}
 @media(max-width:1300px){.v1-panel .measure-grid{grid-template-columns:1fr 1fr}}
+
+/* Dedicated trousers construction rules, same SolidCraft dark visual system */
+.pants-only{display:none}
+.pants-mode .pants-only{display:block}
+.pants-mode #libraryInfo .caution{border-color:#e3a063}
+.pants-mode #preview svg{box-shadow:0 6px 34px #07141e65;border:1px solid #304b5e}
+.pants-setup .sectiontitle{color:#86d4d9}
+.pants-setup .measure-grid{grid-template-columns:1fr 1fr}
+.pants-setup .measure-grid input{font-variant-numeric:tabular-nums}
+.pants-setup .rule-line{display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px solid #2b4053}
+.pants-setup .rule-line strong{font-size:11px;font-weight:500;color:#bcd8e6}
+.pants-setup .rule-line span{font-size:11px;color:#81c7d4;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pants-setup .draft-check{padding:8px 10px;border:1px solid #4d677a;border-radius:5px;background:#203443;color:#dcf0f3;line-height:1.6}
+.pants-setup .draft-check.warning{border-color:#bc9060}
+.pants-setup .v1-help{line-height:1.45;padding:3px 0}
+.pants-reference-report{margin-top:9px}

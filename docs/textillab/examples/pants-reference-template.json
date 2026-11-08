@@ -1,0 +1,27 @@
+{
+  "schema": "textillab-reference/1",
+  "system": "muller-und-sohn",
+  "garment": "trousers",
+  "book": {
+    "title": "DEIN GENAUER Buchtitel",
+    "edition": "DEINE Auflage / Ausgabe",
+    "pages": "SEITENZAHLEN"
+  },
+  "inputCm": {
+    "waist": 84,
+    "hip": 102,
+    "inseam": 80,
+    "outseam": 108,
+    "crotchDepth": 28
+  },
+  "resultsMm": {
+    "sideFront": null,
+    "sideBack": null,
+    "inseamFront": null,
+    "inseamBack": null,
+    "waistFront": null,
+    "waistBack": null,
+    "crotchFront": null,
+    "crotchBack": null
+  }
+}

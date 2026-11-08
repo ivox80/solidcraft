@@ -6,6 +6,7 @@
 "use strict";
 const p=(x,y)=>[x,y], PI=Math.PI;
 const BodiceV2=(typeof module!=="undefined"&&module.exports)?require("./bodice-v2.js"):root.TextilLabBodiceV2;
+const PantsSystem=(typeof module!=="undefined"&&module.exports)?require("./pants-system.js"):root.TextilLabPantsSystem;
 const D={
  chest:100,waist:84,hip:102,back:65,shoulder:44,sleeve:62,
  inseam:80,head:57,hand:22,handLength:19, ease:8
@@ -64,28 +65,6 @@ function sleeve(v,coat=false) {
  a.push(p(arm*.5+wrist*.5,length),p(arm*.5-wrist*.5,length));
  return a;
 }
-function trousers(v) {
- const h=v.hip;
- const rise=Math.max(210,v.inseam*.33);
- const length=v.inseam+rise;
- const w=(h+v.ease)/4;
- const hem=w*.64;
- const front=[
-   p(0,18),p(w*.91,0),p(w+7,rise*.48),p(w+15,rise),
-   p(w*.76+hem*.17,length),p(w*.76-hem*.83,length),
-   p(w*.25,rise+65),p(-w*.15,rise),p(-w*.03,rise*.4)
- ];
- const back=[
-   p(0,10),p(w*1.08,-35),p(w*1.15,rise*.45),p(w*1.25,rise),
-   p(w*.81+hem*.30,length),p(w*.81-hem*.74,length),
-   p(w*.19,rise+64),p(-w*.29,rise),p(-w*.03,rise*.4)
- ];
- return [
-   piece("Vorderhose",front,2,false,"Spiegelpaar; Abnäher/Schrittkurve noch zu konstruieren"),
-   piece("Hinterhose",back,2,false,"Spiegelpaar; Sitzkurve und Mehrweite anpassen"),
-   piece("Bund", [p(0,0),p((v.waist+v.ease)*.55,0),p((v.waist+v.ease)*.55,90),p(0,90)],2,false,"Vereinfachter gerader Bund")
- ];
-}
 function gloveOutline(v) {
  const w=v.hand*.55,h=v.handLength;
  const a=[p(0,h),p(0,h*.31)];
@@ -139,6 +118,10 @@ function skirt(v) {
  ];
 }
 function draft(type,measurements) {
+ if(type==="trousers") {
+   const generated=PantsSystem.draft(measurements);
+   return {type,pieces:generated.pieces,measurements:generated.measurements};
+ }
  const v=values(measurements);
  if(type==="top") {
    const result=BodiceV2.draft(measurements);
@@ -159,7 +142,6 @@ function draft(type,measurements) {
      piece("Jackenärmel",sleeve(v,true),2,false,"Ein-/Zweiteilung später"),
      piece("Kragen", [p(0,0),p(v.chest*.38,0),p(v.chest*.38,95),p(0,95)],1,false,"Platzhalter für späteren geformten Kragen")
    ];break;
- case "trousers": pieces=trousers(v);break;
  case "glove":
    pieces=[
      piece("Handfläche",gloveOutline(v),2,false,"Ein Teil je Hand; Fingerlängen schätzen"),
@@ -202,6 +184,7 @@ function offset(poly,mm) {
 }
 function render(type,measurements,allowance=10,density=210) {
  if(type==="top") return BodiceV2.render(measurements,allowance,density);
+ if(type==="trousers") return PantsSystem.render(measurements,allowance,density);
  const d=draft(type,measurements);
  const seam=Number(allowance),weight=Number(density);
  if(!Number.isFinite(seam)||seam<0||seam>80) throw Error("Nahtzugabe 0–80 mm wählen.");

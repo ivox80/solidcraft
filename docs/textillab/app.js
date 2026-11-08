@@ -224,6 +224,10 @@ function catalogMeasurements() {
   for (const name of Object.keys(TextilLabBodiceV2.defaults)) {
     result[name] = $("m-" + name).value;
   }
+  for (const name of Object.keys(TextilLabPantsSystem.defaults)) {
+    if (!Object.hasOwn(result,name)) result[name] = $("m-" + name).value;
+    else if (name === "waist" || name === "hip" || name === "inseam") result[name] = $("m-" + name).value;
+  }
   return result;
 }
 
@@ -311,19 +315,73 @@ function downloadDraft(filename, data, type) {
   setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 
+
+let currentPantsDraft=null;
+let currentPantsReference=null;
+function showPantsReport(result) {
+  const container=$("pantsRuleReport");container.replaceChildren();
+  const status=document.createElement("div");
+  status.className="draft-check"+(result.warnings.length?" warning":"");
+  status.textContent="Seitennähte |Δ| "+result.checks.sideDifferenceMm.toFixed(1)+
+    " mm · Innenbein |Δ| "+result.checks.inseamDifferenceMm.toFixed(1)+" mm";
+  container.append(status);
+  for(const rule of result.rules) {
+    const div=document.createElement("div");div.className="rule-line";
+    const name=document.createElement("strong");
+    name.textContent=rule.id+" "+rule.title;name.title=rule.formula;
+    const val=document.createElement("span");val.textContent=rule.value.toFixed(1)+" "+rule.unit;
+    div.append(name,val);container.append(div);
+  }
+  for(const message of result.warnings){
+    const note=document.createElement("div");note.className="v1-help";
+    note.textContent="• "+message;container.append(note);
+  }
+  const cite=document.createElement("div");cite.className="v1-help";
+  cite.textContent="Regelquelle: "+result.system.label+" · "+result.system.status;
+  container.append(cite);
+  if(currentPantsReference)showPantsComparison(currentPantsReference,result);
+}
+function showPantsComparison(reference,draft) {
+  const container=$("pantsReferenceReport");container.replaceChildren();
+  try {
+    const comparison=TextilLabRulesetRegistry.compare(reference,draft);
+    const heading=document.createElement("div");
+    heading.className="draft-check";
+    heading.textContent=comparison.book.title+" · "+comparison.book.edition+
+      " · S. "+comparison.book.pages;
+    container.append(heading);
+    for(const item of comparison.differences) {
+      const div=document.createElement("div");div.className="rule-line";
+      const key=document.createElement("strong");key.textContent=item.label;
+      const val=document.createElement("span");val.textContent=
+        (item.differenceMm>=0?"+":"")+item.differenceMm.toFixed(1)+" mm";
+      div.append(key,val);container.append(div);
+    }
+  }catch(error){
+    const msg=document.createElement("div");msg.className="draft-check warning";
+    msg.textContent=error.message;container.append(msg);
+  }
+}
+
 function updateCatalog() {
   const kind = $("templateType").value;
   const name = TextilLabPatternLibrary.types.find(x => x[0] === kind)?.[1] || kind;
   document.body.classList.add("library-mode");
   document.body.classList.toggle("bodice-v2-mode", kind === "top");
+  document.body.classList.toggle("pants-mode", kind === "trousers");
   $("modelPanelTitle").textContent = "Grundschnitt · " + name;
   try {
     const result = kind === "top"
       ? TextilLabDraftingSystem.generate(catalogMeasurements(), draftOptions())
-      : TextilLabPatternLibrary.render(kind, catalogMeasurements(), $("allowance").value, $("density").value);
+      : kind === "trousers"
+        ? TextilLabPantsSystem.render(catalogMeasurements(), $("allowance").value, $("density").value)
+        : TextilLabPatternLibrary.render(kind, catalogMeasurements(), $("allowance").value, $("density").value);
     latestDraft=kind==="top"?result:null;
     if(kind==="top")showDraftReport(result);
     else $("draftRuleReport").replaceChildren();
+    currentPantsDraft=kind==="trousers"?result:null;
+    if(kind==="trousers")showPantsReport(result);
+    else $("pantsRuleReport").replaceChildren();
     state.currentSvg = result.svg;
     $("preview").innerHTML = result.svg;
     $("pieces").textContent = String(result.pieces);
@@ -372,7 +430,7 @@ async function updatePreview() {
     updateCatalog();
     return;
   }
-  document.body.classList.remove("library-mode", "bodice-v2-mode");
+  document.body.classList.remove("library-mode", "bodice-v2-mode", "pants-mode");
   $("modelPanelTitle").textContent = "3D-Modell · Schnittlinien bearbeiten";
   if (!state.source) return;
   $("errorDetail").textContent = "";
@@ -500,7 +558,7 @@ $("templateType").addEventListener("change", () => {
   checkpointDraft();
   draw();
 });
-for (const key of [...Object.keys(TextilLabPatternLibrary.defaults), ...Object.keys(TextilLabBodiceV2.defaults)]) {
+for (const key of [...new Set([...Object.keys(TextilLabPatternLibrary.defaults), ...Object.keys(TextilLabBodiceV2.defaults), ...Object.keys(TextilLabPantsSystem.defaults)])]) {
   $("m-" + key).addEventListener("input", () => {
     if(key==="ease")$("draftFit").value="custom";
     if ($("templateType").value !== "mesh") {updateCatalog();checkpointDraft();}
@@ -564,6 +622,24 @@ $("preview").addEventListener("click",event=>{
   field.scrollIntoView({block:"center",behavior:"smooth"});
   field.focus();field.select();
   setStatus("Maß "+measurement+" zur Bearbeitung ausgewählt.");
+});
+
+
+$("pantsReferenceFile").addEventListener("change",async event=>{
+  const file=event.target.files?.[0];if(!file)return;
+  try {
+    if(file.size>1024*1024)throw Error("Referenzdatei größer als 1 MB.");
+    const ref=JSON.parse(await file.text());
+    if(!currentPantsDraft)throw Error("Zuerst die Hose auswählen.");
+    TextilLabRulesetRegistry.compare(ref,currentPantsDraft);
+    currentPantsReference=ref;
+    showPantsComparison(ref,currentPantsDraft);
+    setStatus("Buchreferenz verglichen: "+ref.book.title);
+  }catch(err){
+    setStatus(err.message,true);
+    const box=$("pantsReferenceReport");box.textContent="Vergleich nicht möglich: "+err.message;
+  }
+  event.target.value="";
 });
 
 document.body.classList.add("library-mode");
