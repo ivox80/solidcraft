@@ -112,7 +112,8 @@ function prepare(input={},options={}){
   const m=parameters(input,options);
   const {head,hoodHeight:height,hoodDepth:depth,frontNeck,backNeck}=m.mm;
   const extra=m.mode==="ease"?m.plannedEaseMm:0;
-  const factor=m.mode==="stretch"?1-m.stretchPct/100:1;
+  // Required stretch is measured against original A: B/A - 1.
+  const factor=m.mode==="stretch"?1/(1+m.stretchPct/100):1;
   const desiredBack=(backNeck+extra*.5)*factor;
   const desiredFront=(frontNeck+extra*.5)*factor;
   const A=P(0,height);
