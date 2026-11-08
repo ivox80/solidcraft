@@ -137,7 +137,7 @@ function bodyMeshes(body,shape){
  // The mannequin is positioned so that its skull clears the 2D top seam,
  // and the neck sits below the sewn neckline. Coordinates are in millimeters.
  const headCenter=P(0,h*.50,0);
- const headRadii=P(r*.94,Math.min(h*.36,r*1.30),r*.94);
+ const headRadii=P(r,Math.min(h*.36,r*1.30),r); // skull horizontal equator respects the entered head circumference
  const head=createSphere("Parametrischer Kopf","#baa99a",headCenter,headRadii);
  const neck=createSphere("Hals / Maßpuppe","#b3a393",P(0,-24,-7),
   P(body.neckMm/(2*PI),77,body.neckMm/(2*PI)*.87),20,10);
