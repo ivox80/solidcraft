@@ -1,7 +1,6 @@
 "use strict";
 
-// UI and 3D interaction live in JavaScript. Unfolding and seam allowances
-// remain exclusively in the Rust core (POST /api/unfold).
+// Client-side online preview: mesh unfolding uses browser-engine.js; garment blocks use pattern-library.js.
 const $ = (id) => document.getElementById(id);
 const canvas = $("modelCanvas");
 const ctx = canvas.getContext("2d");
@@ -216,7 +215,71 @@ function updateSeamList() {
     list.appendChild(button);
   }
 }
+
+function catalogMeasurements() {
+  const result = {};
+  for (const name of Object.keys(TextilLabPatternLibrary.defaults)) {
+    result[name] = $("m-" + name).value;
+  }
+  return result;
+}
+function updateCatalog() {
+  const kind = $("templateType").value;
+  const name = TextilLabPatternLibrary.types.find(x => x[0] === kind)?.[1] || kind;
+  document.body.classList.add("library-mode");
+  $("modelPanelTitle").textContent = "Grundschnitt · " + name;
+  try {
+    const result = TextilLabPatternLibrary.render(
+      kind, catalogMeasurements(), $("allowance").value, $("density").value
+    );
+    state.currentSvg = result.svg;
+    $("preview").innerHTML = result.svg;
+    $("pieces").textContent = String(result.pieces);
+    $("sewnArea").textContent = (result.sewnArea / 1e6).toFixed(4);
+    $("cutArea").textContent = (result.cutArea / 1e6).toFixed(4);
+    $("mass").textContent = result.mass.toFixed(1);
+    $("exportBtn").disabled = false;
+    const catalog = $("libraryInfo");
+    catalog.replaceChildren();
+    const title = document.createElement("div");
+    title.className = "title"; title.textContent = name;
+    catalog.appendChild(title);
+    const guide = document.createElement("div");
+    guide.className = "smallhint";
+    guide.textContent = "Die Schnittteile werden aus deinen Maßen neu konstruiert. Alle angegebenen Maße sind in cm, die SVG-Schnittkonturen in mm.";
+    catalog.appendChild(guide);
+    for (const part of result.parts) {
+      const item = document.createElement("div"); item.className = "piece";
+      const heading = document.createElement("strong");
+      heading.textContent = part.name + " · " + part.count + "×" + (part.fold ? " · Stoffbruch" : "");
+      const info = document.createElement("span"); info.textContent = part.notes || "Schnittteil";
+      item.append(heading, info);
+      catalog.appendChild(item);
+    }
+    const caution = document.createElement("div");
+    caution.className = "caution";
+    caution.textContent = "Konstruktions-Prototyp: Passform, Rundungen, Nähte und Materialverbrauch vor dem Zuschnitt mit einem Probeteil prüfen.";
+    catalog.appendChild(caution);
+    $("errorDetail").textContent = "Grundschnitt-Konzept";
+    setStatus("Parametrischer Grundschnitt aktualisiert: " + name + " · " + result.pieces + " Teile");
+  } catch (error) {
+    state.currentSvg = "";
+    clearStats();
+    $("preview").replaceChildren();
+    const label = document.createElement("div"); label.className = "placeholder";
+    label.textContent = error.message;
+    $("preview").appendChild(label);
+    setStatus(error.message, true);
+    $("errorDetail").textContent = "Maße überprüfen";
+  }
+}
 async function updatePreview() {
+  if ($("templateType").value !== "mesh") {
+    updateCatalog();
+    return;
+  }
+  document.body.classList.remove("library-mode");
+  $("modelPanelTitle").textContent = "3D-Modell · Schnittlinien bearbeiten";
   if (!state.source) return;
   $("errorDetail").textContent = "";
   setStatus("Schnittmuster im Browser berechnen …");
@@ -337,5 +400,15 @@ $("exportBtn").addEventListener("click", () => {
   document.body.append(link); link.click(); link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 });
+$("templateType").addEventListener("change", () => {
+  updatePreview();
+  draw();
+});
+for (const key of Object.keys(TextilLabPatternLibrary.defaults)) {
+  $("m-" + key).addEventListener("input", () => {
+    if ($("templateType").value !== "mesh") updateCatalog();
+  });
+}
+document.body.classList.add("library-mode");
 new ResizeObserver(draw).observe(canvas);
 loadExample();

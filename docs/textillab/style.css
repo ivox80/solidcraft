@@ -25,3 +25,21 @@ select.full,.btn.full{width:100%}.inputunit{display:flex;align-items:center;gap:
 @media(max-width:1300px){.workbench{grid-template-columns:226px minmax(0,1fr)}.inspector{display:none}.topnote{display:none}}
 @media(max-width:900px){body{overflow:auto;min-height:100vh;height:auto}.workbench{grid-template-columns:1fr}.sidebar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 18px}.sidebarbottom{display:none}.sectiontitle{grid-column:span 2}.panes{grid-template-columns:1fr;height:960px}.pane{min-height:450px}.topbar{gap:8px}.brand{font-size:13px}.topactions{gap:6px}.statusline .right{display:none}}
 @media(max-width:520px){.sidebar{display:block}.topbar{padding:0 8px}.tag{display:none}.topactions .soft{display:none}.panes{height:850px}}
+
+/* v0.6 parametric garment blocks */
+.measure-details{margin-top:14px;border:1px solid var(--border);border-radius:8px;padding:10px;background:#12212e}
+.measure-details summary{cursor:pointer;color:#badddf;font-weight:650;font-size:11px}
+.measure-details summary span{color:#8ea6ba;font-weight:400}
+.measure-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.measure-input{display:flex;flex-direction:column;gap:4px;min-width:0}
+.measure-input span{font-size:10px;color:#a4b8cb}
+.measure-input input{width:100%;min-width:0;text-align:right;height:30px;padding:3px 6px}
+.library-overview{display:none;position:absolute;inset:0;padding:22px;overflow-y:auto;background:radial-gradient(ellipse at 35% 35%,#203647,#121e29 85%)}
+.library-mode #libraryInfo{display:block}
+.library-mode #modelCanvas,.library-mode .viewhint,.library-mode .axes,.library-mode .mesh-only{display:none!important}
+.library-overview .title{font-size:21px;font-weight:700;color:#edf4fa;margin:0 0 7px}
+.library-overview .smallhint{font-size:12px;color:#94aebe;line-height:1.65}
+.library-overview .piece{border:1px solid #345067;border-radius:9px;background:#172a39;margin:10px 0;padding:11px}
+.library-overview .piece strong{color:#cbe9f0;display:block}
+.library-overview .piece span{font-size:11px;color:#9ab2c4}
+.library-overview .caution{color:#ecad8a;border-left:3px solid #efaa81;padding:9px 11px;background:#4b362a48;font-size:11px;margin-top:14px}
