@@ -71,7 +71,8 @@ fn draft_panel(m: Measurements, front: bool) -> BodicePanel {
             m.back_waist_mm
         };
     let bust_y = waist_y - m.front_length_mm + m.bust_height_mm;
-    let arm_y = top_y + m.armhole_depth_mm;
+    // Shared front/back underarm balance line; different body lengths must not shift the seam.
+    let arm_y = waist_y - m.front_length_mm + m.armhole_depth_mm;
     let hip_y = waist_y + m.waist_to_hip_mm;
     let hem_y = waist_y + m.hem_below_waist_mm;
     let chest_w = (m.chest_mm + m.ease_mm) / 4.0 * if front { 1.008 } else { 0.992 };
@@ -99,7 +100,7 @@ fn draft_panel(m: Measurements, front: bool) -> BodicePanel {
     );
     shape.line(Point::new(shoulder_x, top_y + slope));
     shape.cubic(
-        Point::new(shoulder_x + 8.0, top_y + slope + arm_y * 0.12),
+        Point::new(shoulder_x + 8.0, top_y + slope + (arm_y - top_y - slope) * 0.12),
         Point::new(chest_w - 47.0, arm_y - 12.0),
         Point::new(chest_w, arm_y),
         30,
@@ -209,13 +210,21 @@ pub struct SleevePanel {
 /// Two symmetric cut copies from a single, slightly asymmetric set-in sleeve.
 /// The cap remains a fitting approximation until armhole seam lengths are balanced.
 pub fn draft_sleeve(m: Measurements) -> Result<SleevePanel, String> {
+    draft_sleeve_with_cap(m, None)
+}
+
+/// Override is the cap height in mm, used by the seam-length optimizer.
+pub fn draft_sleeve_with_cap(m: Measurements, height_override: Option<f64>) -> Result<SleevePanel, String> {
     m.validate()?;
     if m.upper_arm_mm <= m.wrist_mm || m.upper_arm_mm > m.chest_mm * 0.8 {
         return Err("Upper arm and wrist circumference are inconsistent".into());
     }
     let bicep_width = m.upper_arm_mm + m.ease_mm * 0.25;
     let cuff_width = m.wrist_mm + (m.ease_mm * 0.22).max(45.0);
-    let cap = (m.armhole_depth_mm * 0.60).clamp(105.0, 190.0);
+    let cap = height_override.unwrap_or((m.armhole_depth_mm * 0.60).clamp(105.0, 190.0));
+    if !cap.is_finite() || !(60.0..=260.0).contains(&cap) {
+        return Err("Invalid sleeve cap height".into());
+    }
     let length = m.sleeve_mm;
     if length <= cap + 110.0 {
         return Err("Sleeve length is too short for the sleeve cap".into());
@@ -406,6 +415,16 @@ fn render_panel(
 }
 
 pub fn export(m: Measurements, seam_mm: f64, density_g_m2: f64) -> Result<GarmentExport, String> {
+    export_with_options(m, seam_mm, density_g_m2, None, true)
+}
+
+pub fn export_with_options(
+    m: Measurements,
+    seam_mm: f64,
+    density_g_m2: f64,
+    cap_height_override: Option<f64>,
+    include_sleeves: bool,
+) -> Result<GarmentExport, String> {
     if !seam_mm.is_finite() || !(0.0..=80.0).contains(&seam_mm) {
         return Err("Seam allowance must be between 0 and 80 mm".into());
     }
@@ -413,7 +432,7 @@ pub fn export(m: Measurements, seam_mm: f64, density_g_m2: f64) -> Result<Garmen
         return Err("Material density must be between 1 and 5000 g/m2".into());
     }
     let panels = draft(m)?;
-    let sleeve = draft_sleeve(m)?;
+    let sleeve = draft_sleeve_with_cap(m, cap_height_override)?;
     let front_width = panels[0]
         .piece
         .outline
@@ -431,11 +450,11 @@ pub fn export(m: Measurements, seam_mm: f64, density_g_m2: f64) -> Result<Garmen
     let sleeve_dx = back_dx + back_width + 100.0;
     let sleeve_dy = 95.0;
     let sleeve_width = sleeve.piece.outline.iter().map(|p| p.x).fold(0.0, f64::max);
-    let width = sleeve_dx + sleeve_width + 95.0;
+    let width = if include_sleeves { sleeve_dx + sleeve_width + 95.0 } else {back_dx + back_width + 110.0};
     let height = panels
         .iter()
         .map(|p| p.hem_y)
-        .fold(sleeve.cuff_y + sleeve_dy, f64::max)
+        .fold(if include_sleeves {sleeve.cuff_y+sleeve_dy} else {0.0}, f64::max)
         + 90.0;
     let mut sewn = 0.0;
     let mut cut = 0.0;
@@ -443,11 +462,13 @@ pub fn export(m: Measurements, seam_mm: f64, density_g_m2: f64) -> Result<Garmen
         sewn += area(&panel.piece.outline).abs();
         cut += area(&offset(&panel.piece.outline, seam_mm)?).abs();
     }
-    sewn += 2.0 * area(&sleeve.piece.outline).abs();
-    cut += 2.0 * area(&offset(&sleeve.piece.outline, seam_mm)?).abs();
+    if include_sleeves {
+        sewn += 2.0 * area(&sleeve.piece.outline).abs();
+        cut += 2.0 * area(&offset(&sleeve.piece.outline, seam_mm)?).abs();
+    }
     let mass = cut * density_g_m2 / 1_000_000.0;
     let mut svg=format!(
-        "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{width:.3}mm\" height=\"{height:.3}mm\" viewBox=\"0 0 {width:.3} {height:.3}\" data-bodice-version=\"2\" data-pieces=\"4\" data-sleeves=\"2\" data-sewn-area=\"{sewn:.3}\" data-cut-area=\"{cut:.3}\" data-mass=\"{mass:.3}\">\n"
+        "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{width:.3}mm\" height=\"{height:.3}mm\" viewBox=\"0 0 {width:.3} {height:.3}\" data-bodice-version=\"2\" data-pieces=\"{count}\" data-sleeves=\"{sleeves_count}\" data-sewn-area=\"{sewn:.3}\" data-cut-area=\"{cut:.3}\" data-mass=\"{mass:.3}\">\n"
     );
     svg.push_str("<rect width=\"100%\" height=\"100%\" fill=\"#14202e\"/>\n");
     for (label, y) in [
@@ -470,7 +491,7 @@ pub fn export(m: Measurements, seam_mm: f64, density_g_m2: f64) -> Result<Garmen
     }
     svg.push_str(&render_panel(&panels[0], front_dx, false, seam_mm)?);
     svg.push_str(&render_panel(&panels[1], back_dx, true, seam_mm)?);
-    svg.push_str(&render_sleeve(&sleeve, sleeve_dx, sleeve_dy, seam_mm)?);
+    if include_sleeves {svg.push_str(&render_sleeve(&sleeve, sleeve_dx, sleeve_dy, seam_mm)?);}
     let _ = writeln!(
         svg,
         "<text x=\"{front_dx:.3}\" y=\"30\" font-size=\"17\" font-weight=\"700\" fill=\"#e4eff7\">TEXTILLAB · OBERTEIL · VT / RT / ÄRMEL</text>"
@@ -494,10 +515,10 @@ pub fn export(m: Measurements, seam_mm: f64, density_g_m2: f64) -> Result<Garmen
         svg,
         parts: {
             let mut all: Vec<Piece> = panels.into_iter().map(|p| p.piece).collect();
-            all.push(sleeve.piece);
+            if include_sleeves {all.push(sleeve.piece);}
             all
         },
-        pieces_to_cut: 4,
+        pieces_to_cut: count,
         sewn_area_mm2: sewn,
         cut_area_mm2: cut,
         estimated_mass_g: mass,
