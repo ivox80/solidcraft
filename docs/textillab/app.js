@@ -226,6 +226,91 @@ function catalogMeasurements() {
   }
   return result;
 }
+
+const history={items:[],index:-1,applying:false};
+let latestDraft=null;
+function draftOptions() {
+  return {
+    fit:$("draftFit").value,
+    style:$("draftStyle").value,
+    targetEaseMm:Number($("draftEase").value),
+    allowance:Number($("allowance").value),
+    density:Number($("density").value),
+    alterations:Object.fromEntries(
+      Object.keys(TextilLabDraftingSystem.zones).map(zone=>[zone, Number($("zone-"+zone).value)])),
+    layers:Object.fromEntries(
+      Object.keys(TextilLabDraftingSystem.layers).map(layer=>[layer, $("layer-"+layer).checked]))
+  };
+}
+function draftSnapshot() {
+  return {schema:"textillab-construction/1.0",measurements:catalogMeasurements(),settings:draftOptions()};
+}
+function checkpointDraft() {
+  if(history.applying||$("templateType").value!=="top")return;
+  const value=JSON.stringify(draftSnapshot());
+  if(history.items[history.index]===value)return;
+  history.items.splice(history.index+1);
+  history.items.push(value);
+  if(history.items.length>50)history.items.shift();
+  history.index=history.items.length-1;
+  $("draftUndo").disabled=history.index<=0;
+  $("draftRedo").disabled=history.index>=history.items.length-1;
+}
+function applySnapshot(saved) {
+  if(saved.schema!=="textillab-construction/1.0"||
+    !saved.measurements||!saved.settings)throw Error("Unbekannte TextilLab-Projektversion.");
+  const m=saved.measurements,c=saved.settings;
+  const validMeasureNames=[...Object.keys(TextilLabPatternLibrary.defaults),...Object.keys(TextilLabBodiceV2.defaults)];
+  history.applying=true;
+  try {
+    for(const key of validMeasureNames)
+      if(Object.hasOwn(m,key)) $("m-"+key).value=String(m[key]);
+    if(c.fit && c.fit in TextilLabDraftingSystem.fits)$("draftFit").value=c.fit;
+    if(c.style && c.style in TextilLabDraftingSystem.styles)$("draftStyle").value=c.style;
+    if(c.targetEaseMm!=null)$("draftEase").value=String(c.targetEaseMm);
+    if(c.allowance!=null)$("allowance").value=String(c.allowance);
+    if(c.density!=null)$("density").value=String(c.density);
+    for(const zone of Object.keys(TextilLabDraftingSystem.zones))
+      if(c.alterations && Object.hasOwn(c.alterations,zone))
+        $("zone-"+zone).value=String(c.alterations[zone]);
+    for(const layer of Object.keys(TextilLabDraftingSystem.layers))
+      if(c.layers && Object.hasOwn(c.layers,layer))
+        $("layer-"+layer).checked=Boolean(c.layers[layer]);
+    $("templateType").value="top";
+    updateCatalog();
+  } finally {history.applying=false;}
+}
+function showDraftReport(result) {
+  const container=$("draftRuleReport");
+  container.replaceChildren();
+  if(!result.rules)return;
+  const cap=result.capBalance,measures=result.measures;
+  const status=document.createElement("div");
+  status.className="draft-check"+(!cap.reachable||Math.abs(cap.actualEaseMm-cap.targetEaseMm)>1||measures.sideDifferenceMm>5?" warning":"");
+  status.textContent="Ärmelkugel "+measures.sleeveCapMm.toFixed(1)+
+    " mm · Armloch "+measures.totalArmholeMm.toFixed(1)+
+    " mm · Einhalteweite "+measures.sleeveEaseMm.toFixed(1)+
+    " mm (Ziel "+cap.targetEaseMm.toFixed(1)+" mm)";
+  container.appendChild(status);
+  for(const rule of result.rules) {
+    const line=document.createElement("div");line.className="rule-line";
+    const name=document.createElement("strong");name.textContent=rule.id+" · "+rule.title;
+    name.title=rule.formula+" | "+rule.depends.join(", ");
+    const val=document.createElement("span");val.textContent=rule.value.toFixed(1)+" "+rule.unit;
+    line.append(name,val);container.appendChild(line);
+  }
+  const disclosure=document.createElement("p");
+  disclosure.className="v1-help";
+  disclosure.textContent="TextilLab Experimental 1 · eigene Rechenregeln, keine zertifizierte Schneiderlehre. Nahtlängen sind gemessen, Passform und Abnäher nicht freigegeben.";
+  container.appendChild(disclosure);
+}
+function downloadDraft(filename, data, type) {
+  const url=URL.createObjectURL(new Blob([data],{type}));
+  const a=document.createElement("a");a.href=url;a.download=filename;
+  document.body.append(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
 function updateCatalog() {
   const kind = $("templateType").value;
   const name = TextilLabPatternLibrary.types.find(x => x[0] === kind)?.[1] || kind;
@@ -233,9 +318,12 @@ function updateCatalog() {
   document.body.classList.toggle("bodice-v2-mode", kind === "top");
   $("modelPanelTitle").textContent = "Grundschnitt · " + name;
   try {
-    const result = TextilLabPatternLibrary.render(
-      kind, catalogMeasurements(), $("allowance").value, $("density").value
-    );
+    const result = kind === "top"
+      ? TextilLabDraftingSystem.generate(catalogMeasurements(), draftOptions())
+      : TextilLabPatternLibrary.render(kind, catalogMeasurements(), $("allowance").value, $("density").value);
+    latestDraft=kind==="top"?result:null;
+    if(kind==="top")showDraftReport(result);
+    else $("draftRuleReport").replaceChildren();
     state.currentSvg = result.svg;
     $("preview").innerHTML = result.svg;
     $("pieces").textContent = String(result.pieces);
@@ -264,10 +352,12 @@ function updateCatalog() {
     caution.className = "caution";
     caution.textContent = "Konstruktions-Prototyp: Passform, Rundungen, Nähte und Materialverbrauch vor dem Zuschnitt mit einem Probeteil prüfen.";
     catalog.appendChild(caution);
-    $("errorDetail").textContent = "Grundschnitt-Konzept";
+    $("errorDetail").textContent = kind==="top"?"Schnittsystem 1.0 · Konzept":"Grundschnitt-Konzept";
     setStatus("Parametrischer Grundschnitt aktualisiert: " + name + " · " + result.pieces + " Teile");
+    checkpointDraft();
   } catch (error) {
     state.currentSvg = "";
+    latestDraft=null;
     clearStats();
     $("preview").replaceChildren();
     const label = document.createElement("div"); label.className = "placeholder";
@@ -374,11 +464,12 @@ $("clearBtn").addEventListener("click", () => {
   state.seams.clear(); updateSeamList(); draw(); updatePreview();
 });
 for (const id of ["allowance", "density", "units"]) {
-  $(id).addEventListener("change", () => { draw(); updatePreview(); });
+  $(id).addEventListener("change", () => { draw(); updatePreview(); checkpointDraft(); });
 }
 $("material").addEventListener("change", () => {
   if ($("material").value !== "custom") $("density").value = $("material").value;
   updatePreview();
+  checkpointDraft();
 });
 $("density").addEventListener("input", () => { $("material").value = "custom"; });
 $("objFile").addEventListener("change", async e => {
@@ -406,13 +497,79 @@ $("exportBtn").addEventListener("click", () => {
 });
 $("templateType").addEventListener("change", () => {
   updatePreview();
+  checkpointDraft();
   draw();
 });
 for (const key of [...Object.keys(TextilLabPatternLibrary.defaults), ...Object.keys(TextilLabBodiceV2.defaults)]) {
   $("m-" + key).addEventListener("input", () => {
-    if ($("templateType").value !== "mesh") updateCatalog();
+    if ($("templateType").value !== "mesh") {updateCatalog();checkpointDraft();}
   });
 }
+
+function draftChanged() {
+  if($("templateType").value==="top"){
+    if($("draftFit").value!=="custom") $("m-ease").value=
+      TextilLabDraftingSystem.fits[$("draftFit").value].ease;
+    updateCatalog();
+    checkpointDraft();
+  }
+}
+for(const id of ["draftFit","draftStyle","draftEase",...Object.keys(TextilLabDraftingSystem.zones).map(k=>"zone-"+k)]) {
+  $(id).addEventListener("change", draftChanged);
+}
+for(const id of Object.keys(TextilLabDraftingSystem.layers).map(k=>"layer-"+k)) {
+  $(id).addEventListener("change",draftChanged);
+}
+$("m-ease").addEventListener("input",()=>{
+  $("draftFit").value="custom";
+});
+$("draftUndo").addEventListener("click",()=>{
+  if(history.index<=0)return;
+  history.index--;
+  applySnapshot(JSON.parse(history.items[history.index]));
+  $("draftUndo").disabled=history.index<=0;
+  $("draftRedo").disabled=false;
+});
+$("draftRedo").addEventListener("click",()=>{
+  if(history.index>=history.items.length-1)return;
+  history.index++;
+  applySnapshot(JSON.parse(history.items[history.index]));
+  $("draftUndo").disabled=false;
+  $("draftRedo").disabled=history.index>=history.items.length-1;
+});
+$("draftSave").addEventListener("click",()=>{
+  try {
+    const project=draftSnapshot();
+    project.report=latestDraft?
+      {rules:latestDraft.rules,capBalance:latestDraft.capBalance}:null;
+    downloadDraft("textillab-grundschnitt-v1.json",JSON.stringify(project,null,2),"application/json");
+  }catch(e){setStatus(e.message,true);}
+});
+$("draftLoad").addEventListener("change",async e=>{
+  const file=e.target.files?.[0];if(!file)return;
+  if(file.size>1024*1024){setStatus("Projektdatei zu groß.",true);return;}
+  try{
+    const parsed=JSON.parse(await file.text());
+    applySnapshot(parsed);
+    checkpointDraft();
+    setStatus("TextilLab-Projekt geladen: "+file.name);
+  }catch(error){setStatus("Projekt konnte nicht gelesen werden: "+error.message,true);}
+  e.target.value="";
+});
+$("preview").addEventListener("click",event=>{
+  const target=event.target.closest?.("[data-measure]");
+  const measurement=target?.getAttribute("data-measure");
+  if(!measurement || $("templateType").value!=="top")return;
+  const field=$("m-"+measurement);
+  if(!field)return;
+  field.closest("details")?.setAttribute("open","");
+  field.scrollIntoView({block:"center",behavior:"smooth"});
+  field.focus();field.select();
+  setStatus("Maß "+measurement+" zur Bearbeitung ausgewählt.");
+});
+
 document.body.classList.add("library-mode");
+$("draftUndo").disabled=true;
+$("draftRedo").disabled=true;
 new ResizeObserver(draw).observe(canvas);
 loadExample();
