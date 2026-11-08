@@ -83,26 +83,6 @@ function bodyModel(type,data={}){
   hip=(Number(data.hip)||102)*10;
  const v=Number(data.ease)||8;
  const outfit=createMesh("Volumen "+type,"#51b5c3");
- if(type==="top"||type==="jacket"){
-  tube(outfit,[[hip/(2*PI)*.84,110],[waist/(2*PI)*.85,105],[chest/(2*PI)*.9,135],[chest/(2*PI)*.6,96]],
-    [-230,-105,110,210],34);
-  for(const side of [-1,1]){
-   const arm=createMesh("Ärmel","#3f94a6");
-   const length=(Number(data.sleeve)||62)*10;
-   const xx=side*chest/(2*PI)*1.1;
-   const rr=55;
-   for(let z=0;z<2;z++){
-    const r=z===0?rr:35,x=xx+side*z*length*.32,y=145-z*length*.92;
-    for(let k=0;k<20;k++){
-     const a=k*2*PI/20;
-     vtx(arm,x+r*Math.cos(a),y,x?rr*Math.sin(a):0);
-    }
-   }
-   for(let k=0;k<20;k++)tri(arm,k,(k+1)%20,k+20),tri(arm,(k+1)%20,(k+1)%20+20,k+20);
-   outfit.edgeGroups.push({indices:[0],color:"#78d9e1",width:1});
-   return false ? [outfit,arm] : [outfit,arm]; // handled below by explicit assembly
-  }
- }
  if(type==="trousers"){
   const hp=(Number(data.hip)||102)*10/(2*PI);
   tube(outfit,[[hp*.92,95],[hp*1.03,115],[hp*.94,106]],[0,130,270],30);
