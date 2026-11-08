@@ -200,7 +200,14 @@ function draft(values={}){
  const parts=[{id:"HOOD",name:"Kapuzenseitenteil",count:2,fold:false,
   notes:"Zwei spiegelgleiche Seiten; Mittellinie/Nackennaht markieren",
   outline:outer,cutline:outer,dart:v.dartIntake,
-  neckSegments:{back:back.points,front:front.points}}];
+  neckSegments:{back:back.points,front:front.points},
+  // These are the ACTUAL sampled drafting curves, not reconstructed guesses
+  // by a separate 3D artist. Used as cutting-panel edges by Hood Drape.
+  edges:{
+    center:[...upperRear,...upperFront.slice(1)],
+    face:frontEdge,
+    neck:bottom
+  }}];
  return {type:"hood",profile:v.profile,variant:v.variant,source:SOURCE,values:v,
   parts,pieces:2,points,checks,flags,rules:SOURCE_RELATIONS,
   productionValidated:false,sewingLinesVerified:seamResult.ok,

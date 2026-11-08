@@ -405,6 +405,93 @@ function hoodInput(){
  }
  return values;
 }
+
+const MANNEQUIN_DEFAULTS={
+ women:{height:168,shoulder:41,chest:94,waist:75,hip:99,neck:35},
+ men:{height:178,shoulder:46,chest:104,waist:89,hip:102,neck:40},
+ child:{height:133,shoulder:32,chest:68,waist:57,hip:74,neck:33}
+};
+function mannequinMeasurements(){
+ const result={};
+ for(const key of ["height","shoulder","chest","waist","hip","neck"]){
+  const value=Number($("fit"+key[0].toUpperCase()+key.slice(1)).value);
+  if(!Number.isFinite(value)||value<=0)throw Error("3D-Maß "+key+" überprüfen.");
+  result[key+"Mm"]=value*10;
+ }
+ return result;
+}
+function fabricSettings(){
+ const fields={preset:$("fabricPreset").value,
+  stiffness:Number($("fabricStiffness").value),
+  bending:Number($("fabricBending").value),
+  drape:Number($("fabricDrape").value),
+  clearanceMm:Number($("fabricClearance").value)};
+ return fields;
+}
+function showDrapeReport(report,error=null){
+ const parent=$("hoodDrapeReport");parent.replaceChildren();
+ const status=document.createElement("div");
+ status.className="hood-drape-status"+(error||report?.fitRisk==="HIGH_STRAIN"?" warning":"");
+ if(error){status.textContent="3D-Anprobe gesperrt: "+error.message;parent.append(status);return;}
+ if(!report){status.textContent="Noch keine 3D-Schnittflächen berechnet.";parent.append(status);return;}
+ status.textContent="Mittelnaht verschweißt · Spalt "+report.centerSeamGapMm.toFixed(3)+" mm";
+ parent.append(status);
+ const details=document.createElement("div");details.className="hood-drape-metrics";
+ const row=(label,value)=>{
+  const item=document.createElement("div");
+  const key=document.createElement("span");key.textContent=label;
+  const val=document.createElement("strong");val.textContent=value;
+  item.append(key,val);details.append(item);
+ };
+ row("2D-Mittelnaht",report.actualSeamMm.toFixed(1)+" mm");
+ row("3D-Dreiecke",String(report.triangles));
+ row("Kantenverzug (RMS)",report.rmsEdgeStrainPct.toFixed(1)+" %");
+ row("Max. Kantenverzug",report.maxEdgeStrainPct.toFixed(1)+" %");
+ row("Kopf-Kollisionskorrekturen",String(report.collisionCorrections));
+ parent.append(details);
+ const note=document.createElement("p");note.className="hint";
+ note.textContent=report.fitRisk==="HIGH_STRAIN"?
+  "WARNUNG: Die vereinfachte Drapierung überdehnt die Schnittfläche. Diese 3D-Form ist keine gültige Passform und darf nicht als fertiger Schnitt freigegeben werden.":
+  "Geometrische Nahtverbindung hergestellt. PBD-Verformung ist nur eine Näherung und nicht für Fertigung validiert.";
+ parent.append(note);
+}
+function refreshFitting(){
+ if($("templateType").value!=="hood"||!hoodDraft)return;
+ try{
+  const report=garmentRenderer.setModel("hood",{
+    ...hoodDraft.model,hoodDraft,mannequin:mannequinMeasurements(),fabric:fabricSettings()
+  });
+  showDrapeReport(report);
+ }catch(error){
+  garmentRenderer.clear();
+  showDrapeReport(null,error);
+ }
+}
+function applyFabricPreset(){
+ const base={
+  cotton:{stiffness:.53,bending:.30,drape:.58,clearance:9},
+  jersey:{stiffness:.27,bending:.13,drape:.93,clearance:7},
+  denim:{stiffness:.80,bending:.65,drape:.22,clearance:13},
+  shell:{stiffness:.62,bending:.40,drape:.48,clearance:11}
+ }[$("fabricPreset").value];
+ if(!base)return;
+ for(const key of ["stiffness","bending","drape"]){
+  const name="fabric"+key[0].toUpperCase()+key.slice(1);
+  $(name).value=base[key];
+  $(name+"Value").textContent=base[key].toFixed(2).replace(".",",");
+ }
+ $("fabricClearance").value=base.clearance;
+}
+function loadMannequinProfile(){
+ const sample=MANNEQUIN_DEFAULTS[$("hoodProfile").value];
+ if(!sample)return;
+ for(const [key,cm]of Object.entries(sample)){
+  const id="fit"+key[0].toUpperCase()+key.slice(1);
+  $(id).value=cm;
+ }
+ refreshFitting();
+}
+
 function hoodCheckReport(result){
  const report=$("hoodRuleReport");report.replaceChildren();
  const heading=document.createElement("div");
@@ -464,7 +551,8 @@ function updateCatalog() {
     hoodDraft=kind==="hood"?result:null;
     if(kind==="hood")hoodCheckReport(result);
     else $("hoodRuleReport").replaceChildren();
-    garmentRenderer.setModel(kind,kind==="hood"?result.model:catalogMeasurements());
+    if(kind==="hood")refreshFitting();
+    else {garmentRenderer.setModel(kind,catalogMeasurements());showDrapeReport(null);}
     requestAnimationFrame(garmentRenderer.draw);
     state.currentSvg = result.svg;
     $("preview").innerHTML = result.svg;
@@ -505,6 +593,7 @@ function updateCatalog() {
   } catch (error) {
     state.currentSvg = "";
     latestDraft=null;hoodDraft=null;
+    if(kind==="hood")showDrapeReport(null,error);
     if(kind==="hood"){
       const note=$("hoodRuleReport");note.replaceChildren();
       const errorRow=document.createElement("div");errorRow.className="draft-check warning";
@@ -789,6 +878,25 @@ $("hoodVariant").addEventListener("change",()=>{
  }
  if($("templateType").value==="hood")updateCatalog();
 });
+$("hoodProfile").addEventListener("change",loadMannequinProfile);
+$("fabricPreset").addEventListener("change",()=>{applyFabricPreset();refreshFitting();});
+for(const name of ["fabricStiffness","fabricBending","fabricDrape"]){
+ $(name).addEventListener("input",()=>{
+  $(name+"Value").textContent=Number($(name).value).toFixed(2).replace(".",",");
+  refreshFitting();
+ });
+}
+for(const key of ["Height","Shoulder","Chest","Waist","Hip","Neck"]){
+ $("fit"+key).addEventListener("input",refreshFitting);
+}
+$("fabricClearance").addEventListener("input",refreshFitting);
+$("garmentFullBody").addEventListener("click",e=>{
+ const on=e.currentTarget.getAttribute("aria-pressed")!=="true";
+ e.currentTarget.setAttribute("aria-pressed",String(on));
+ e.currentTarget.classList.toggle("is-active",on);
+ garmentRenderer.setOptions({fullBody:on});
+});
+
 $("garmentWire").addEventListener("click",e=>{
  const on=e.currentTarget.getAttribute("aria-pressed")!=="true";
  e.currentTarget.setAttribute("aria-pressed",String(on));
@@ -806,7 +914,7 @@ $("garmentObj").addEventListener("click",()=>{
  if($("templateType").value==="mesh")return;
  const src=garmentRenderer.obj();
  downloadDraft("textillab-"+$("templateType").value+"-schematisch.obj",src,"text/plain");
- setStatus("Schematisches 3D-Modell exportiert (keine fertige Stoffsimulation).");
+ setStatus("3D-Mesh exportiert: aus Nahtkonturen verbundener Drapierungsprototyp, keine validierte Passform.");
 });
 new ResizeObserver(()=>{if($("templateType").value!=="mesh")garmentRenderer.draw();})
   .observe($("garmentCanvas"));
