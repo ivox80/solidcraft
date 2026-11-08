@@ -492,7 +492,7 @@ pub fn export(m: Measurements, o: Options) -> Result<GarmentExport, String> {
         }],
         pieces_to_cut: 2,
         sewn_area_mm2: sewn,
-        cut_area_mm2: cut,
+        cut_area_mm2: cut_area,
         estimated_mass_g: mass,
     })
 }
