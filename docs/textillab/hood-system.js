@@ -7,15 +7,19 @@
 (function(root){
 "use strict";
 const SOURCE="https://www.muellerundsohn.com/allgemein/schnittkonstruktion-kapuze/";
+const Contracts=(typeof module!=="undefined"&&module.exports)?require("./seam-contracts.js"):root.TextilLabSeamContracts;
 const VARIANTS=Object.freeze({
  close:{name:"Anliegend",minHeight:30,maxHeight:34,extraDepth:0,publication:true},
  relaxed:{name:"Aufgelockert",minHeight:30,maxHeight:36,extraDepth:4.5,publication:true},
  dartless:{name:"Abnäherlos",minHeight:35,maxHeight:35,extraDepth:3,publication:true}
 });
 const PROFILES=Object.freeze({
- women:{label:"Damen / DOB",sourceVerified:true,group:"DOB"},
- men:{label:"Herren / HAKA",sourceVerified:false,group:"HAKA"},
- child:{label:"Kinder",sourceVerified:false,group:"Kinder"}
+ women:{label:"Damen / DOB",sourceVerified:true,group:"DOB",
+  example:{headCirc:57,backNeck:10,frontNeck:12,hoodHeight:32,hoodDepth:27}},
+ men:{label:"Herren / HAKA",sourceVerified:false,group:"HAKA",
+  example:{headCirc:59,backNeck:10.5,frontNeck:12.5,hoodHeight:34,hoodDepth:28}},
+ child:{label:"Kinder",sourceVerified:false,group:"Kinder",
+  example:{headCirc:52,backNeck:8,frontNeck:9.5,hoodHeight:28,hoodDepth:24,ageYears:8}}
 });
 const DEFAULTS=Object.freeze({
  headCirc:57,backNeck:10,frontNeck:12,neckWidth:8,
@@ -96,7 +100,7 @@ function parse(values={}){
    [0,500];
   v[k]=k==="materialDensity"
     ? Number(values[k]??def)
-    : finite(values[k]??def,k,...limits);
+    : finite(values[k]??PROFILES[profile].example[k]??def,k,...limits);
   if(k==="materialDensity" && (!Number.isFinite(v[k])||v[k]<3||v[k]>500))
     throw Error("Flächengewicht muss zwischen 3 und 500 g/m² liegen.");
  }
@@ -107,9 +111,20 @@ function parse(values={}){
  const joinMode=String(values.joinMode||"match");
  if(!["match","stretch","ease"].includes(joinMode))
   throw Error("Ungültige Nahtverarbeitungsart.");
- const allowedEase=finite(values.allowedEase??0.5,"Erlaubte Mehr-/Minderlänge",0,4);
- if(joinMode!=="match"&&allowedEase<=0)throw Error("Bei Einhalten/Dehnen eine zulässige Differenz vorgeben.");
- return {...v,variant,profile,joinMode,allowedEase,
+ const allowedEase=finite(values.allowedEase??0.5,"Geplante Einhalteweite",0,4);
+ const ageYears=Number(values.ageYears??PROFILES[profile].example.ageYears??8);
+ if(profile==="child"&&(!Number.isFinite(ageYears)||ageYears<1||ageYears>14))
+  throw Error("Kinderprofil: Alter muss zwischen 1 und 14 Jahren liegen.");
+ if(profile==="child"&&values.drawstrings===true)
+  throw Error("Kinderprofil: Halskordeln sind aus Sicherheitsgründen gesperrt.");
+ const stretchPct=Number(values.stretchPct??0);
+ const materialStretchVerified=values.materialStretchVerified===true;
+ if(joinMode==="ease"&&allowedEase<=0)
+  throw Error("Einhalten benötigt eine geplante positive Einhalteweite.");
+ if(joinMode==="stretch"&&(!materialStretchVerified||!Number.isFinite(stretchPct)||
+   stretchPct<=0||stretchPct>12))
+  throw Error("Dehnen benötigt eine geprüfte Materialdehnung von 0 bis 12 %.");
+ return {...v,variant,profile,joinMode,allowedEase,ageYears,stretchPct,materialStretchVerified,
   sourceProfileVerified:profile==="women"&&variant!=="dartless",
   sourceHeightWithinRange:v.hoodHeight>=VARIANTS[variant].minHeight*10&&v.hoodHeight<=VARIANTS[variant].maxHeight*10};
 }
@@ -124,10 +139,14 @@ function seamCheck(actual,target,mode,max,description){
 function draft(values={}){
  const v=parse(values),loose=v.variant==="relaxed";
  const height=v.hoodHeight,depth=v.hoodDepth;
- const rearRaw=Math.max(1,v.backNeck-5); // M&S documented reference relation
- const rearCorrected=rearRaw+5; // independent seam-matching compensation
- const back=neckSegment([0,0],rearCorrected,"back");
- const front=neckSegment(back.end,v.frontNeck,"front");
+ const rearRaw=Math.max(1,v.backNeck-5); // public source reference, not equivalent to a sewn dart
+ const rearCorrected=rearRaw+5; // original geometry compensates for exact neckline sewing length
+ const ease=v.joinMode==="ease"?v.allowedEase:0;
+ const factor=v.joinMode==="stretch"?1/(1+v.stretchPct/100):1;
+ const rearTarget=(rearCorrected+ease*.5)*factor;
+ const frontTarget=(v.frontNeck+ease*.5)*factor;
+ const back=neckSegment([0,0],rearTarget,"back");
+ const front=neckSegment(back.end,frontTarget,"front");
  const bottom=[...back.points,...front.points.slice(1)];
  // Loose version: published 4–5 cm base-distance allowance influences opening curve.
  const forehead=point(depth+v.faceOverlap,-height*.73+(loose?45*.15:0));
@@ -142,13 +161,26 @@ function draft(values={}){
  const outer=[...upperRear,...upperFront.slice(1),
    ...frontEdge.slice(1),...bottom.slice(0,-1).reverse()];
  const sewnRear=arcLength(back.points),sewnFront=arcLength(front.points);
- const checks=[
-  seamCheck(sewnRear,v.backNeck,v.joinMode,v.allowedEase,"Hinteres Halsloch ↔ Kapuze"),
-  seamCheck(sewnFront,v.frontNeck,v.joinMode,v.allowedEase,"Vorderes Halsloch ↔ Kapuze"),
-  seamCheck(arcLength(upperRear)+arcLength(upperFront),
-    arcLength(upperRear)+arcLength(upperFront),"match",0,
-    "Kapuzenmittelnaht (gespiegelte Teile)")
- ];
+ const specs=[
+  ["back-neck","Hinteres Halsloch ↔ Kapuze",sewnRear,v.backNeck],
+  ["front-neck","Vorderes Halsloch ↔ Kapuze",sewnFront,v.frontNeck]
+ ].map(([id,label,aMm,bMm])=>v.joinMode==="ease"?
+    {id,label,aMm,bMm,mode:"ease",plannedEaseMm:v.allowedEase*.5,toleranceMm:.3}:
+    v.joinMode==="stretch"?
+    {id,label,aMm,bMm,mode:"stretch",maxStretchPct:v.stretchPct,
+      materialStretchVerified:true,toleranceMm:.3}:
+    {id,label,aMm,bMm,mode:"match",toleranceMm:.3});
+ const centerLength=arcLength(upperRear)+arcLength(upperFront);
+ specs.push({id:"center",label:"Kapuzenmittelnaht (gespiegelte Teile)",
+   aMm:centerLength,bMm:centerLength,mode:"match",toleranceMm:.3});
+ const seamResult=Contracts.checkAll(specs);
+ const checks=seamResult.seams.map(item=>({
+  name:item.label,actualMm:item.aMm,targetMm:item.bMm,
+  deltaMm:item.deltaMm,mode:item.mode,allowedMm:item.toleranceMm,
+  expectedDeltaMm:item.expectedDeltaMm,status:item.ok?"ok":"fail"
+ }));
+ if(!seamResult.ok)throw Error("Nahtanschlüsse gesperrt: "+
+   seamResult.failed.join(", "));
  const cutArea=polygonArea(outer)*2;
  // Strip approximation is not a robust polygon offset around concave corners.
  const seamAdd=arcLength([...outer,outer[0]])*v.seamAllowance+Math.PI*v.seamAllowance*v.seamAllowance;
@@ -171,6 +203,7 @@ function draft(values={}){
   neckSegments:{back:back.points,front:front.points}}];
  return {type:"hood",profile:v.profile,variant:v.variant,source:SOURCE,values:v,
   parts,pieces:2,points,checks,flags,rules:SOURCE_RELATIONS,
+  productionValidated:false,sewingLinesVerified:seamResult.ok,
   sewnArea:cutArea,cutArea:cutWithAllowance,
   mass:cutWithAllowance/1e6*v.materialDensity,
   model:{type:"hood",heightMm:height,depthMm:depth,
