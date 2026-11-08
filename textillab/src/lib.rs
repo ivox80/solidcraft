@@ -288,3 +288,6 @@ pub mod obj_import;
 
 /// TextilLab Studio panel boundary and SVG preview generation.
 pub mod studio_patterns;
+
+/// Measurement-based clothing starter blocks (concept drafts, not fitted patterns).
+pub mod garments;
