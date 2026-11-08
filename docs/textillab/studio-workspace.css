@@ -64,6 +64,11 @@ html,body{min-width:320px}
 .library-overview .piece strong{font-size:12px;letter-spacing:.005em}
 .library-overview .piece span{line-height:1.55;display:block;margin-top:3px}
 .library-overview .caution{background:#40312440;border-radius:8px;border-left:3px solid var(--studio-orange)}
+.library-overview .piece{display:flex;gap:10px;align-items:center}
+.library-overview .piece-copy{flex:1;min-width:0}
+.library-overview .piece-thumb{flex:0 0 62px;width:62px;height:85px;background:#102433;border-radius:6px;border:1px solid #325267;padding:4px}
+.library-overview .piece-thumb polygon{fill:#30586a66;stroke:#82dce3;stroke-width:1.45;stroke-linejoin:round}
+.library-overview .piece.is-selected .piece-thumb polygon{fill:#3d707644;stroke:#ffe0a1}
 .library-overview .piece::before{content:"";width:6px;height:6px;display:inline-block;position:absolute;top:17px;right:13px;border:1px solid #69bdc5;border-radius:50%}
 .library-overview .piece.is-selected::before{background:#8de8e5}
 .inspector-status{border:1px solid #42617b;background:linear-gradient(145deg,#1e3748,#172a3b);padding:14px;border-radius:11px;margin-bottom:19px}
