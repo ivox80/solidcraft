@@ -41,6 +41,8 @@ jobs:
           node --check ../docs/textillab/app.js
           node --check ../docs/textillab/browser-engine.js
           node --check ../docs/textillab/pattern-library.js
+          node --check ../docs/textillab/bodice-v2.js
+          node --test ../docs/textillab/bodice-v2.test.js
           node --test ../docs/textillab/browser-engine.test.js
           node --test ../docs/textillab/pattern-library.test.js
       - name: Unit tests
@@ -58,6 +60,16 @@ jobs:
           cargo run --release --bin textillab-pattern -- top chest=112 waist=92 --allowance 10 --out smoke-exports/top-block.svg
           cargo run --release --bin textillab-pattern -- trousers hip=112 inseam=82 --out smoke-exports/trousers-block.svg
           cargo run --release --bin textillab-pattern -- glove hand=23 handLength=20 --out smoke-exports/glove-block.svg
+      - name: VT/RT v2 bodice SVG smoke test
+        run: |
+          cargo run --release --bin textillab-pattern -- top chest=108 waist=89 hip=106 frontLength=48 backWaist=44 bustHeight=28 bustSpan=20 neck=39 armholeDepth=23 --out smoke-exports/bodice-v2.svg
+      - name: Check bodice features in SVG
+        shell: bash
+        run: |
+          test -s smoke-exports/bodice-v2.svg
+          grep -q 'data-bodice-version="2"' smoke-exports/bodice-v2.svg
+          grep -q 'FDL' smoke-exports/bodice-v2.svg
+          grep -q 'Taille' smoke-exports/bodice-v2.svg
       - name: Verify clothing SVG
         shell: bash
         run: |
