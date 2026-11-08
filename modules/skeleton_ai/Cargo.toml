@@ -17,3 +17,6 @@ path = "src/lib.rs"
 [[bin]]
 name = "skeleton-ai"
 path = "src/main.rs"
+[[bin]]
+name = "skeleton-editor"
+path = "src/bin/editor.rs"
