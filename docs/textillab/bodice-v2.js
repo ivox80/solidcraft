@@ -171,10 +171,11 @@ function createPiece(side,m){
   };
 }
 
-function createSleeve(m) {
+function createSleeve(m, opts={}) {
   const bicepWidth=m.upperArm+m.ease*.25;
   const cuffWidth=m.wrist+Math.max(45,m.ease*.22);
-  const capHeight=Math.min(Math.max(m.armholeDepth*.60,105),190);
+  const capHeight=opts.capHeightMm==null?Math.min(Math.max(m.armholeDepth*.60,105),190):Number(opts.capHeightMm);
+  if(!Number.isFinite(capHeight)||capHeight<60||capHeight>260)throw Error('Ungültige Ärmelkugelhöhe.');
   const length=m.sleeve;
   if(length<=capHeight+110)throw Error("Die Armlänge ist für die Ärmelkugel zu kurz.");
   const center=bicepWidth*.5;
@@ -197,10 +198,10 @@ function createSleeve(m) {
     notches:[P(bicepWidth*.21,capHeight*.27),P(bicepWidth*.81,capHeight*.31)]
   };
 }
-function draft(measurements={}){
+function draft(measurements={}, opts={}){
   const m=measureValues(measurements);
   const front=createPiece("front",m),back=createPiece("back",m);
-  return {pieces:[front,back,createSleeve(m)],measurements:m,kind:"top",construction:"bodice-v2"};
+  return {pieces:[front,back,createSleeve(m,opts)],measurements:m,kind:"top",construction:"bodice-v2"};
 }
 function esc(s){return String(s).replace(/[&<>"]/g,x=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[x]));}
 function svgPoly(points,color,extra=""){
@@ -247,28 +248,29 @@ function techSleeve(piece,dx,dy,allowance) {
   out.push('</g>');
   return out.join("");
 }
-function render(measurements={},allowance=10,density=210){
+function render(measurements={},allowance=10,density=210,opts={}){
   const m=measureValues(measurements);
   allowance=Number(allowance);density=Number(density);
   if(!Number.isFinite(allowance)||allowance<0||allowance>80)throw Error("Nahtzugabe: 0–80 mm");
   if(!Number.isFinite(density)||density<1||density>5000)throw Error("Flächengewicht: 1–5000 g/m²");
-  const d=draft(measurements),front=d.pieces[0],back=d.pieces[1],sleeve=d.pieces[2];
+  const d=draft(measurements,opts),front=d.pieces[0],back=d.pieces[1],sleeve=d.pieces[2];
+  const showSleeves=opts.sleeves!==false;
   const frontDX=75,frontWidth=Math.max(...front.outline.map(p=>p[0]));
   const backDX=frontDX+frontWidth+100,backWidth=Math.max(...back.outline.map(p=>p[0]));
   const sleeveDX=backDX+backWidth+100,sleeveDY=95;
   const sleeveWidth=Math.max(...sleeve.outline.map(p=>p[0]));
   const bodyRight=backDX+backWidth;
-  const width=sleeveDX+sleeveWidth+95;
-  const maxY=Math.max(front.points.hemY,back.points.hemY,sleeve.points.hemY+sleeveDY);
+  const width=showSleeves?sleeveDX+sleeveWidth+95:bodyRight+110;
+  const maxY=showSleeves?Math.max(front.points.hemY,back.points.hemY,sleeve.points.hemY+sleeveDY):Math.max(front.points.hemY,back.points.hemY);
   const height=maxY+90;
   let areaSewn=0,areaCut=0;
-  for(const part of d.pieces){
+  for(const part of (showSleeves?d.pieces:d.pieces.slice(0,2))){
     areaSewn+=Math.abs(area(part.outline))*part.count;
     areaCut+=Math.abs(area(convexLikeOffset(part.outline,allowance)))*part.count;
   }
   const mass=areaCut*density/1e6;
-  const count=d.pieces.reduce((n,p)=>n+p.count,0);
-  const out=['<svg xmlns="http://www.w3.org/2000/svg" width="'+fmt(width)+'mm" height="'+fmt(height)+'mm" viewBox="0 0 '+fmt(width)+' '+fmt(height)+'" data-bodice-version="2" data-pieces="'+count+'" data-sleeves="2" data-sewn-area="'+fmt(areaSewn)+'" data-cut-area="'+fmt(areaCut)+'" data-mass="'+fmt(mass)+'">'];
+  const count=(showSleeves?d.pieces:d.pieces.slice(0,2)).reduce((n,p)=>n+p.count,0);
+  const out=['<svg xmlns="http://www.w3.org/2000/svg" width="'+fmt(width)+'mm" height="'+fmt(height)+'mm" viewBox="0 0 '+fmt(width)+' '+fmt(height)+'" data-bodice-version="2" data-pieces="'+count+'" data-sleeves="'+(showSleeves?2:0)+'" data-sewn-area="'+fmt(areaSewn)+'" data-cut-area="'+fmt(areaCut)+'" data-mass="'+fmt(mass)+'">'];
   out.push('<rect width="100%" height="100%" fill="#14202e"/>');
   const lines=[["Brust",front.points.bustY],["Taille",front.points.waistY],["Hüfte",front.points.hipY],["Saum",front.points.hemY]];
   for(const [name,y]of lines){
@@ -277,15 +279,15 @@ function render(measurements={},allowance=10,density=210){
   }
   out.push(techPiece(front,frontDX,false,allowance));
   out.push(techPiece(back,backDX,true,allowance));
-  out.push(techSleeve(sleeve,sleeveDX,sleeveDY,allowance));
+  if(showSleeves)out.push(techSleeve(sleeve,sleeveDX,sleeveDY,allowance));
   out.push('<text x="'+fmt(frontDX)+'" y="30" font-size="17" font-weight="700" fill="#e4eff7">TEXTILLAB · OBERTEIL · VT / RT / ÄRMEL</text>');
   out.push('<text x="'+fmt(frontDX)+'" y="51" font-size="12" fill="#9bafc1">Türkis: Nahtlinie · Orange: Zuschnitt · FDL / Abnäher / Referenzlinien</text>');
-  out.push('<text x="'+fmt(sleeveDX)+'" y="'+fmt(sleeveDY-35)+'" font-size="14" font-weight="600" fill="#dcebf3">ÄR · 2× zuschneiden</text>');
+  if(showSleeves)out.push('<text x="'+fmt(sleeveDX)+'" y="'+fmt(sleeveDY-35)+'" font-size="14" font-weight="600" fill="#dcebf3">ÄR · 2× zuschneiden</text>');
   out.push('<text x="'+fmt(frontDX)+'" y="'+fmt(height-24)+'" font-size="11" fill="#9bafc1">KONZEPT-GRUNDSCHNITT · Armkugellänge und Abnäher vor Fertigung prüfen</text>');
   out.push('</svg>');
   return {
     svg:out.join("\n"),pieces:count,sewnArea:areaSewn,cutArea:areaCut,mass,
-    parts:d.pieces.map(({name,outline,count,fold,notes})=>({name,outline,count,fold,notes})),
+    parts:(showSleeves?d.pieces:d.pieces.slice(0,2)).map(({name,outline,count,fold,notes})=>({name,outline,count,fold,notes})),
     construction:d
   };
 }
