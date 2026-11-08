@@ -366,31 +366,31 @@ fn render_panel(
     };
     let flip = if mirrored { " scale(-1 1)" } else { "" };
     let _ = writeln!(s, "<g transform=\"translate({tx:0.3} 0){flip}\">");
-    let _=writeln!(s,"<path d=\"{}\" fill=\"#cb6953\" fill-opacity=\"0.04\" stroke=\"#a85145\" stroke-width=\"1.8\" stroke-linejoin=\"round\"/>",panel.svg_path);
+    let _=writeln!(s,"<path d=\"{}\" fill=\"#264554\" fill-opacity=\"0.22\" stroke=\"#75d3d6\" stroke-dasharray=\"4 2\" stroke-width=\"1.4\" stroke-linejoin=\"round\"/>",panel.svg_path);
     if seam_mm > 0.0 {
         let cut = offset(&panel.piece.outline, seam_mm)?;
-        let _=writeln!(s,"<polygon fill=\"none\" stroke=\"#e5a16c\" stroke-width=\"0.85\" stroke-dasharray=\"5 3\" points=\"{}\"/>",svg_points(&cut));
+        let _=writeln!(s,"<polygon fill=\"none\" stroke=\"#efa16f\" stroke-width=\"1.6\" points=\"{}\"/>",svg_points(&cut));
     }
     let _ = writeln!(
         s,
-        "<polygon fill=\"none\" stroke=\"#b9594d\" stroke-width=\"1.3\" points=\"{}\"/>",
+        "<polygon fill=\"none\" stroke=\"#f29a87\" stroke-width=\"1.3\" points=\"{}\"/>",
         svg_points(&panel.waist_dart)
     );
     for leg in &panel.shoulder_dart_legs {
         let end = panel.shoulder_dart_apex;
-        let _=writeln!(s,"<path d=\"M {:0.3} {:0.3} L {:0.3} {:0.3}\" fill=\"none\" stroke=\"#b9594d\" stroke-width=\"1.4\"/>",
+        let _=writeln!(s,"<path d=\"M {:0.3} {:0.3} L {:0.3} {:0.3}\" fill=\"none\" stroke=\"#f29a87\" stroke-width=\"1.4\"/>",
             leg.x,leg.y,end.x,end.y);
     }
     let top = panel.bust_y + 60.0;
     let bottom = panel.hem_y - 65.0;
     let x = panel.grain_x;
-    let _=writeln!(s,"<path d=\"M {x:0.3} {top:0.3} V {bottom:0.3}\" fill=\"none\" stroke=\"#4d8c9d\" stroke-width=\"1.5\"/>");
-    let _=writeln!(s,"<path d=\"M {:0.3} {:0.3} L {x:0.3} {bottom:0.3} L {:0.3} {:0.3}\" fill=\"none\" stroke=\"#4d8c9d\" stroke-width=\"2\"/>",
+    let _=writeln!(s,"<path d=\"M {x:0.3} {top:0.3} V {bottom:0.3}\" fill=\"none\" stroke=\"#68c6d5\" stroke-width=\"1.5\"/>");
+    let _=writeln!(s,"<path d=\"M {:0.3} {:0.3} L {x:0.3} {bottom:0.3} L {:0.3} {:0.3}\" fill=\"none\" stroke=\"#68c6d5\" stroke-width=\"2\"/>",
         x-6.0,bottom-13.0,x+6.0,bottom-13.0);
     let b = panel.bust_point;
     let _ = writeln!(
         s,
-        "<circle cx=\"{:0.3}\" cy=\"{:0.3}\" r=\"2.6\" fill=\"#8d4037\"/>",
+        "<circle cx=\"{:0.3}\" cy=\"{:0.3}\" r=\"2.6\" fill=\"#ef9f74\"/>",
         b.x, b.y
     );
     s.push_str("</g>\n");
@@ -400,10 +400,10 @@ fn render_panel(
         horizontal_offset + 110.0
     };
     let label = if mirrored { "RT" } else { "VT" };
-    let _=writeln!(s,"<text x=\"{label_x:0.3}\" y=\"{:0.3}\" text-anchor=\"middle\" font-size=\"24\" fill=\"#304a53\" font-weight=\"700\">{label}</text>",panel.hem_y-35.0);
+    let _=writeln!(s,"<text x=\"{label_x:0.3}\" y=\"{:0.3}\" text-anchor=\"middle\" font-size=\"24\" fill=\"#dcebf3\" font-weight=\"700\">{label}</text>",panel.hem_y-35.0);
     let label_x = label_x + 34.0;
     let label_y = panel.waist_y + 120.0;
-    let _=writeln!(s,"<text x=\"{label_x:0.3}\" y=\"{label_y:0.3}\" font-size=\"13\" fill=\"#4d8c9d\" transform=\"rotate(-90 {label_x:0.3} {label_y:0.3})\">FDL</text>");
+    let _=writeln!(s,"<text x=\"{label_x:0.3}\" y=\"{label_y:0.3}\" font-size=\"13\" fill=\"#68c6d5\" transform=\"rotate(-90 {label_x:0.3} {label_y:0.3})\">FDL</text>");
     Ok(s)
 }
 
@@ -415,47 +415,77 @@ pub fn export(m: Measurements, seam_mm: f64, density_g_m2: f64) -> Result<Garmen
         return Err("Material density must be between 1 and 5000 g/m2".into());
     }
     let panels = draft(m)?;
-    let back_width = panels[1]
-        .piece
-        .outline
-        .iter()
-        .map(|p| p.x)
-        .fold(f64::NEG_INFINITY, f64::max);
-    let width = 515.0 + back_width + 115.0;
-    let height = panels.iter().map(|p| p.hem_y).fold(0.0, f64::max) + 80.0;
+    let sleeve = draft_sleeve(m)?;
+    let front_width = panels[0].piece.outline.iter().map(|p| p.x).fold(0.0, f64::max);
+    let back_width = panels[1].piece.outline.iter().map(|p| p.x).fold(0.0, f64::max);
+    let front_dx = 75.0;
+    let back_dx = front_dx + front_width + 100.0;
+    let sleeve_dx = back_dx + back_width + 100.0;
+    let sleeve_dy = 95.0;
+    let sleeve_width = sleeve.piece.outline.iter().map(|p| p.x).fold(0.0, f64::max);
+    let width = sleeve_dx + sleeve_width + 95.0;
+    let height = panels.iter().map(|p| p.hem_y).fold(sleeve.cuff_y + sleeve_dy, f64::max) + 90.0;
     let mut sewn = 0.0;
     let mut cut = 0.0;
     for panel in &panels {
         sewn += area(&panel.piece.outline).abs();
         cut += area(&offset(&panel.piece.outline, seam_mm)?).abs();
     }
+    sewn += 2.0*area(&sleeve.piece.outline).abs();
+    cut += 2.0*area(&offset(&sleeve.piece.outline, seam_mm)?).abs();
     let mass = cut * density_g_m2 / 1_000_000.0;
     let mut svg=format!(
-        "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{width:0.3}mm\" height=\"{height:0.3}mm\" viewBox=\"0 0 {width:0.3} {height:0.3}\" data-bodice-version=\"2\" data-pieces=\"2\" data-sewn-area=\"{sewn:0.3}\" data-cut-area=\"{cut:0.3}\" data-mass=\"{mass:0.3}\">\n"
+        "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{width:.3}mm\" height=\"{height:.3}mm\" viewBox=\"0 0 {width:.3} {height:.3}\" data-bodice-version=\"2\" data-pieces=\"4\" data-sleeves=\"2\" data-sewn-area=\"{sewn:.3}\" data-cut-area=\"{cut:.3}\" data-mass=\"{mass:.3}\">\n"
     );
-    svg.push_str("<rect width=\"100%\" height=\"100%\" fill=\"#d9c4a5\"/>\n");
+    svg.push_str("<rect width=\"100%\" height=\"100%\" fill=\"#14202e\"/>\n");
     for (label, y) in [
         ("Brust", panels[0].bust_y),
         ("Taille", panels[0].waist_y),
         ("Hüfte", panels[0].hip_y),
         ("Saum", panels[0].hem_y),
     ] {
-        let _=writeln!(svg,"<path d=\"M 20 {y:0.3} H {:0.3}\" stroke=\"#776b5c\" stroke-width=\"0.65\" opacity=\"0.48\"/>",width-70.0);
         let _ = writeln!(
             svg,
-            "<text x=\"{:0.3}\" y=\"{:0.3}\" font-size=\"13\" fill=\"#52616c\">{label}</text>",
-            width - 60.0,
-            y - 5.0
+            "<path d=\"M 20 {y:.3} H {:.3}\" stroke=\"#53768c\" stroke-width=\"0.65\" stroke-dasharray=\"4 5\" opacity=\"0.62\"/>",
+            back_dx+back_width+25.0
+        );
+        let _ = writeln!(
+            svg,
+            "<text x=\"{:.3}\" y=\"{:.3}\" font-size=\"12\" fill=\"#a3b9c9\">{label}</text>",
+            back_dx+back_width+29.0,
+            y-6.0
         );
     }
-    svg.push_str(&render_panel(&panels[0], 75.0, false, seam_mm)?);
-    svg.push_str(&render_panel(&panels[1], 515.0, true, seam_mm)?);
-    svg.push_str("<text x=\"75\" y=\"29\" font-size=\"15\" font-weight=\"700\" fill=\"#3b454e\">TEXTILLAB · VT / RT GRUNDSCHNITT v2</text>\n");
-    svg.push_str("<text x=\"75\" y=\"49\" font-size=\"11\" fill=\"#62584e\">Abnäher, Hilfslinien &amp; Fadenlauf · Maße in mm · KONZEPT-GRUNDSCHNITT · keine freigegebene Fertigungsvorlage</text>\n</svg>\n");
+    svg.push_str(&render_panel(&panels[0], front_dx, false, seam_mm)?);
+    svg.push_str(&render_panel(&panels[1], back_dx, true, seam_mm)?);
+    svg.push_str(&render_sleeve(&sleeve, sleeve_dx, sleeve_dy, seam_mm)?);
+    let _ = writeln!(
+        svg,
+        "<text x=\"{front_dx:.3}\" y=\"30\" font-size=\"17\" font-weight=\"700\" fill=\"#e4eff7\">TEXTILLAB · OBERTEIL · VT / RT / ÄRMEL</text>"
+    );
+    let _ = writeln!(
+        svg,
+        "<text x=\"{front_dx:.3}\" y=\"51\" font-size=\"12\" fill=\"#9bafc1\">Türkis: Nahtlinie · Orange: Zuschnitt · FDL / Abnäher / Referenzlinien</text>"
+    );
+    let _ = writeln!(
+        svg,
+        "<text x=\"{sleeve_dx:.3}\" y=\"{:.3}\" font-size=\"14\" font-weight=\"600\" fill=\"#dcebf3\">ÄR · 2× zuschneiden</text>",
+        sleeve_dy-35.0
+    );
+    let _ = writeln!(
+        svg,
+        "<text x=\"{front_dx:.3}\" y=\"{:.3}\" font-size=\"11\" fill=\"#9bafc1\">KONZEPT-GRUNDSCHNITT · Armkugellänge und Abnäher vor Fertigung prüfen</text>",
+        height-24.0
+    );
+    svg.push_str("</svg>\n");
     Ok(GarmentExport {
         svg,
-        parts: panels.into_iter().map(|p| p.piece).collect(),
-        pieces_to_cut: 2,
+        parts: {
+            let mut all: Vec<Piece> = panels.into_iter().map(|p| p.piece).collect();
+            all.push(sleeve.piece);
+            all
+        },
+        pieces_to_cut: 4,
         sewn_area_mm2: sewn,
         cut_area_mm2: cut,
         estimated_mass_g: mass,
