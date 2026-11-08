@@ -196,6 +196,152 @@ pub fn draft(m: Measurements) -> Result<Vec<BodicePanel>, String> {
     Ok(vec![draft_panel(m, true), draft_panel(m, false)])
 }
 
+
+#[derive(Clone, Debug)]
+pub struct SleevePanel {
+    pub piece: Piece,
+    pub svg_path: String,
+    pub cap_y: f64,
+    pub cuff_y: f64,
+    pub grain_x: f64,
+    pub notches: [Point; 2],
+}
+
+/// Two symmetric cut copies from a single, slightly asymmetric set-in sleeve.
+/// The cap remains a fitting approximation until armhole seam lengths are balanced.
+pub fn draft_sleeve(m: Measurements) -> Result<SleevePanel, String> {
+    m.validate()?;
+    if m.upper_arm_mm <= m.wrist_mm || m.upper_arm_mm > m.chest_mm * 0.8 {
+        return Err("Upper arm and wrist circumference are inconsistent".into());
+    }
+    let bicep_width = m.upper_arm_mm + m.ease_mm * 0.25;
+    let cuff_width = m.wrist_mm + (m.ease_mm * 0.22).max(45.0);
+    let cap = (m.armhole_depth_mm * 0.60).clamp(105.0, 190.0);
+    let length = m.sleeve_mm;
+    if length <= cap + 110.0 {
+        return Err("Sleeve length is too short for the sleeve cap".into());
+    }
+    let center = bicep_width * 0.5;
+    let mut shape = Shape::start(0.0, cap);
+    shape.cubic(
+        Point::new(bicep_width * 0.10, cap * 0.38),
+        Point::new(center * 0.50, cap * 0.08),
+        Point::new(center, 0.0),
+        24,
+    );
+    shape.cubic(
+        Point::new(center + bicep_width * 0.23, -1.0),
+        Point::new(bicep_width * 0.93, cap * 0.50),
+        Point::new(bicep_width, cap),
+        24,
+    );
+    shape.cubic(
+        Point::new(bicep_width * 0.94, cap + 120.0),
+        Point::new(center + cuff_width * 0.55, length - 85.0),
+        Point::new(center + cuff_width * 0.50, length),
+        20,
+    );
+    shape.line(Point::new(center - cuff_width * 0.50, length));
+    shape.cubic(
+        Point::new(center - cuff_width * 0.55, length - 85.0),
+        Point::new(bicep_width * 0.06, cap + 120.0),
+        Point::new(0.0, cap),
+        20,
+    );
+    shape.close();
+    // The final cubic ends at the start, which the polygon loop already closes.
+    shape.outline.pop();
+    Ok(SleevePanel {
+        piece: Piece {
+            name: "Ärmel – langer Ärmel",
+            outline: shape.outline,
+            holes: Vec::new(),
+            copies: 2,
+            on_fold: false,
+            note: "Two sleeves; sleeve cap seam length needs fitting",
+        },
+        svg_path: shape.path,
+        cap_y: cap,
+        cuff_y: length,
+        grain_x: center,
+        notches: [
+            Point::new(bicep_width * 0.21, cap * 0.27),
+            Point::new(bicep_width * 0.81, cap * 0.31),
+        ],
+    })
+}
+
+/// Fully enumerated garment pattern pieces: front, back, and two sleeves.
+pub fn draft_parts(m: Measurements) -> Result<Vec<Piece>, String> {
+    let panels = draft(m)?;
+    let sleeve = draft_sleeve(m)?;
+    let mut result: Vec<Piece> = panels.into_iter().map(|p| p.piece).collect();
+    result.push(sleeve.piece);
+    Ok(result)
+}
+
+fn render_sleeve(
+    sleeve: &SleevePanel,
+    dx: f64,
+    dy: f64,
+    seam_mm: f64,
+) -> Result<String, String> {
+    let mut s = format!("<g transform=\"translate({dx:.3} {dy:.3})\">\n");
+    let _ = writeln!(
+        s,
+        "<path d=\"{}\" fill=\"#264554\" fill-opacity=\"0.22\" stroke=\"#75d3d6\" stroke-dasharray=\"4 2\" stroke-width=\"1.4\" stroke-linejoin=\"round\"/>",
+        sleeve.svg_path
+    );
+    if seam_mm > 0.0 {
+        let cut = offset(&sleeve.piece.outline, seam_mm)?;
+        let _ = writeln!(
+            s,
+            "<polygon fill=\"none\" stroke=\"#efa16f\" stroke-width=\"1.6\" stroke-linejoin=\"round\" points=\"{}\"/>",
+            svg_points(&cut)
+        );
+    }
+    let center = sleeve.grain_x;
+    let top = sleeve.cap_y + 80.0;
+    let end = sleeve.cuff_y - 50.0;
+    let _ = writeln!(
+        s,
+        "<path d=\"M {center:.3} {top:.3} V {end:.3}\" stroke=\"#68c6d5\" stroke-width=\"1.5\"/>"
+    );
+    let _ = writeln!(
+        s,
+        "<path d=\"M {:.3} {:.3} L {center:.3} {end:.3} L {:.3} {:.3}\" stroke=\"#68c6d5\" stroke-width=\"1.5\" fill=\"none\"/>",
+        center-6.0,end-13.0,center+6.0,end-13.0
+    );
+    let width = sleeve.piece.outline.iter().map(|p| p.x).fold(0.0, f64::max);
+    let cap = sleeve.cap_y;
+    let _ = writeln!(
+        s,
+        "<path d=\"M -12 {cap:.3} H {:.3}\" stroke=\"#53768c\" stroke-dasharray=\"4 5\" stroke-width=\"0.65\" opacity=\"0.6\"/>",
+        width+12.0
+    );
+    for (i, notch) in sleeve.notches.iter().enumerate() {
+        let size = if i == 0 { 3.4 } else { 2.6 };
+        let _ = writeln!(
+            s,
+            "<circle cx=\"{:.3}\" cy=\"{:.3}\" r=\"{size:.3}\" fill=\"#ef9f74\"/>",
+            notch.x, notch.y
+        );
+    }
+    let _ = writeln!(
+        s,
+        "<text x=\"{center:.3}\" y=\"{:.3}\" text-anchor=\"middle\" font-size=\"22\" font-weight=\"700\" fill=\"#dcebf3\">ÄR</text>",
+        sleeve.cuff_y - 22.0
+    );
+    let middle = (sleeve.cap_y + sleeve.cuff_y)*0.5;
+    let tag_x = center + 24.0;
+    let _ = writeln!(
+        s,
+        "<text x=\"{tag_x:.3}\" y=\"{middle:.3}\" text-anchor=\"middle\" font-size=\"12\" fill=\"#68c6d5\" transform=\"rotate(-90 {tag_x:.3} {middle:.3})\">FDL</text>"
+    );
+    s.push_str("</g>\n");
+    Ok(s)
+}
+
 fn render_panel(
     panel: &BodicePanel,
     horizontal_offset: f64,
