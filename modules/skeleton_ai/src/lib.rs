@@ -6,6 +6,7 @@
 //! Not a B-Rep solid or a FEM solver; use mechanical validation separately.
 use serde::{Deserialize, Serialize};
 pub mod inference;
+pub mod mechanics;
 use std::collections::HashMap;
 use std::f64::consts::PI;
 
@@ -212,6 +213,7 @@ pub struct SkeletonDocument {
     #[serde(default, deserialize_with = "deserialize_active")] pub active: Vec<bool>,
     #[serde(default)] pub section_stations: HashMap<String,EdgeStations>,
     #[serde(default)] pub cross_section: Option<DefaultSection>,
+    #[serde(default)] pub mechanics: Option<mechanics::MechanicalSetup>,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DefaultSection {
@@ -467,7 +469,7 @@ mod tests {
         assert!(p.sdf(0.07,0.0,1.0)>0.0); // outside narrow end
     }
     #[test] fn setting_end_leaves_start_untouched(){
-        let mut doc=SkeletonDocument{nodes:vec![[0.0,0.0,0.0],[1.0,0.0,0.0]],edges:vec![[0,1]],areas:vec![0.01],active:vec![],section_stations:HashMap::new(),cross_section:None};
+        let mut doc=SkeletonDocument{nodes:vec![[0.0,0.0,0.0],[1.0,0.0,0.0]],edges:vec![[0,1]],areas:vec![0.01],active:vec![],section_stations:HashMap::new(),cross_section:None,mechanics:None};
         let start=doc.to_skeleton(0.0,0.0).unwrap().beams[0].sections.stations[0].dims().unwrap();
         set_station(&mut doc,0,1,station(1.0,Shape::Ellipse,0.2,0.1)).unwrap();
         assert_eq!(start,doc.section_stations["0"].stations[0].dims().unwrap());
@@ -481,7 +483,7 @@ mod tests {
         }
     }
     #[test] fn setting_start_leaves_end_untouched(){
-        let mut doc=SkeletonDocument{nodes:vec![[0.0,0.0,0.0],[1.0,0.0,0.0]],edges:vec![[0,1]],areas:vec![0.01],active:vec![],section_stations:HashMap::new(),cross_section:None};
+        let mut doc=SkeletonDocument{nodes:vec![[0.0,0.0,0.0],[1.0,0.0,0.0]],edges:vec![[0,1]],areas:vec![0.01],active:vec![],section_stations:HashMap::new(),cross_section:None,mechanics:None};
         let end=doc.to_skeleton(0.0,0.0).unwrap().beams[0].sections.stations[1].dims().unwrap();
         set_station(&mut doc,0,0,station(0.0,Shape::RoundedRectangle,0.18,0.08)).unwrap();
         assert_eq!(end,doc.section_stations["0"].stations[1].dims().unwrap());
@@ -498,7 +500,7 @@ mod tests {
         assert!(p.validate().is_err());
     }
     #[test] fn simple_mesh_generation(){
-        let doc=SkeletonDocument{nodes:vec![[0.0,0.0,0.0],[1.0,0.0,0.0]],edges:vec![[0,1]],areas:vec![0.012],active:vec![],section_stations:HashMap::new(),cross_section:None};
+        let doc=SkeletonDocument{nodes:vec![[0.0,0.0,0.0],[1.0,0.0,0.0]],edges:vec![[0,1]],areas:vec![0.012],active:vec![],section_stations:HashMap::new(),cross_section:None,mechanics:None};
         let s=doc.to_skeleton(0.1,0.0).unwrap();
         let m=generate_mesh(&s,36,300_000).unwrap();
         assert!(!m.faces.is_empty());
