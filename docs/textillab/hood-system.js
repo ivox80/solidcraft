@@ -111,7 +111,7 @@ function parse(values={}){
  const joinMode=String(values.joinMode||"match");
  if(!["match","stretch","ease"].includes(joinMode))
   throw Error("Ungültige Nahtverarbeitungsart.");
- const allowedEase=finite(values.allowedEase??0.5,"Geplante Einhalteweite",0,4);
+ const allowedEase=finite(values.allowedEase??0.5,"Erlaubte / geplante Einhalteweite",0,4);
  const ageYears=Number(values.ageYears??PROFILES[profile].example.ageYears??8);
  if(profile==="child"&&(!Number.isFinite(ageYears)||ageYears<1||ageYears>14))
   throw Error("Kinderprofil: Alter muss zwischen 1 und 14 Jahren liegen.");
