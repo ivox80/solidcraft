@@ -225,8 +225,10 @@ function catalogMeasurements() {
     result[name] = $("m-" + name).value;
   }
   for (const name of Object.keys(TextilLabPantsSystem.defaults)) {
-    if (!Object.hasOwn(result,name)) result[name] = $("m-" + name).value;
-    else if (name === "waist" || name === "hip" || name === "inseam") result[name] = $("m-" + name).value;
+    // Shared body values live in the general panel; pants-only waistToHip
+    // intentionally has a separate input (avoids duplicate HTML IDs).
+    const id=name==="waistToHip"?"m-pantsWaistToHip":"m-"+name;
+    if (!Object.hasOwn(result,name) || name==="waistToHip") result[name] = $(id).value;
   }
   return result;
 }
@@ -559,11 +561,16 @@ $("templateType").addEventListener("change", () => {
   draw();
 });
 for (const key of [...new Set([...Object.keys(TextilLabPatternLibrary.defaults), ...Object.keys(TextilLabBodiceV2.defaults), ...Object.keys(TextilLabPantsSystem.defaults)])]) {
-  $("m-" + key).addEventListener("input", () => {
+  const input=key==="waistToHip"?$("m-"+key):$("m-"+key);
+  input.addEventListener("input", () => {
     if(key==="ease")$("draftFit").value="custom";
     if ($("templateType").value !== "mesh") {updateCatalog();checkpointDraft();}
   });
 }
+// Pants-specific waist-to-hip input is distinct from the top drafting input.
+$("m-pantsWaistToHip").addEventListener("input",()=>{
+  if($("templateType").value==="trousers")updateCatalog();
+});
 
 function draftChanged() {
   if($("templateType").value==="top"){
