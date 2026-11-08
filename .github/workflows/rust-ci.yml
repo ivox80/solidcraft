@@ -46,6 +46,8 @@ jobs:
           node --check ../docs/textillab/pattern-library.js
           node --check ../docs/textillab/bodice-v2.js
           node --check ../docs/textillab/drafting-system.js
+          node --check ../docs/textillab/studio-workspace.js
+          node --test ../docs/textillab/studio-workspace.test.js
           node --test ../docs/textillab/drafting-system.test.js
           node --test ../docs/textillab/bodice-v2.test.js
           node --test ../docs/textillab/browser-engine.test.js
