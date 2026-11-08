@@ -161,7 +161,10 @@ impl Measurements {
         if self.shoulder_mm > self.chest_mm * 0.8 || self.waist_mm > self.hip_mm * 1.6 {
             return Err("Check body measurements (shoulders/waist)".into());
         }
-        if self.bust_height_mm >= self.front_length_mm-40.0 || self.waist_to_hip_mm >= self.hem_below_waist_mm || self.armhole_depth_mm >= self.front_length_mm*0.83 {
+        if self.bust_height_mm >= self.front_length_mm - 40.0
+            || self.waist_to_hip_mm >= self.hem_below_waist_mm
+            || self.armhole_depth_mm >= self.front_length_mm * 0.83
+        {
             return Err("Invalid bodice height relationships".into());
         }
         Ok(())
@@ -472,7 +475,10 @@ fn skirt(m: Measurements) -> Vec<Piece> {
 pub fn draft(kind: Garment, m: Measurements) -> Result<Vec<Piece>, String> {
     m.validate()?;
     Ok(match kind {
-        Garment::Top => crate::bodice_v2::draft(m)?.into_iter().map(|b|b.piece).collect(),
+        Garment::Top => crate::bodice_v2::draft(m)?
+            .into_iter()
+            .map(|b| b.piece)
+            .collect(),
         Garment::Jacket => vec![
             piece(
                 "Jacke vorne",
