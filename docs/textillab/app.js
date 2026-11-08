@@ -501,6 +501,8 @@ function updateCatalog() {
   } catch (error) {
     state.currentSvg = "";
     latestDraft=null;hoodDraft=null;
+    garmentRenderer.clear();
+    $("libraryInfo").replaceChildren();
     clearStats();
     $("preview").replaceChildren();
     const label = document.createElement("div"); label.className = "placeholder";
