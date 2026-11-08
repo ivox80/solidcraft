@@ -40,6 +40,9 @@ jobs:
         run: |
           node --check ../docs/textillab/app.js
           node --check ../docs/textillab/browser-engine.js
+          node --check ../docs/textillab/seam-contracts.js
+          node --check ../docs/textillab/hood-system.js
+          node --test ../docs/textillab/hood-system.test.js
           node --check ../docs/textillab/pants-system.js
           node --check ../docs/textillab/ruleset-registry.js
           node --test ../docs/textillab/pants-system.test.js
@@ -72,6 +75,20 @@ jobs:
           grep -q 'data-pants-system="textillab.pants.experimental.1"' smoke-exports/pants-rules-v11.svg
           grep -q 'HH' smoke-exports/pants-rules-v11.svg
           grep -q 'FDL' smoke-exports/pants-rules-v11.svg
+      - name: Parametric hood profiles and sewing seam contract smoke tests
+        run: |
+          cargo run --release --bin textillab-pattern -- hood --profile women head=57 backNeck=10 frontNeck=12 hoodHeight=32 hoodDepth=27 --out smoke-exports/hood-women-v13.svg
+          cargo run --release --bin textillab-pattern -- hood --profile men --style relaxed head=59 backNeck=10.5 frontNeck=12.5 --out smoke-exports/hood-men-v13.svg
+          cargo run --release --bin textillab-pattern -- hood --profile child ageYears=8 head=52 backNeck=8 frontNeck=9.5 --out smoke-exports/hood-child-v13.svg
+      - name: Verify hood provenance, fitted seams and explicit nonapproval
+        shell: bash
+        run: |
+          test -s smoke-exports/hood-women-v13.svg
+          test -s smoke-exports/hood-men-v13.svg
+          test -s smoke-exports/hood-child-v13.svg
+          grep -q 'data-hood-system="textillab.hood.prototype.1"' smoke-exports/hood-women-v13.svg
+          grep -q 'data-seams-ok="true"' smoke-exports/hood-women-v13.svg
+          grep -q 'data-production-approved="false"' smoke-exports/hood-child-v13.svg
       - name: Clothing blocks smoke test
         run: |
           cargo run --release --bin textillab-pattern -- top chest=112 waist=92 --allowance 10 --out smoke-exports/top-block.svg
