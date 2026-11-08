@@ -7,13 +7,14 @@
 const p=(x,y)=>[x,y], PI=Math.PI;
 const BodiceV2=(typeof module!=="undefined"&&module.exports)?require("./bodice-v2.js"):root.TextilLabBodiceV2;
 const PantsSystem=(typeof module!=="undefined"&&module.exports)?require("./pants-system.js"):root.TextilLabPantsSystem;
+const HoodSystem=(typeof module!=="undefined"&&module.exports)?require("./hood-system.js"):root.TextilLabHoodSystem;
 const D={
  chest:100,waist:84,hip:102,back:65,shoulder:44,sleeve:62,
  inseam:80,head:57,hand:22,handLength:19, ease:8
 };
 const TYPES=[
  ["top","Oberteil / T-Shirt"],["jacket","Jacke"],["trousers","Hose"],
- ["glove","Handschuh"],["beanie","Mütze"],["hat","Hut"],["skirt","Rock"]
+ ["hood","Kapuze – KH"],["glove","Handschuh"],["beanie","Mütze"],["hat","Hut"],["skirt","Rock"]
 ];
 const clamp=(n,lo,hi)=>Math.max(lo,Math.min(hi,n));
 function values(m) {
@@ -118,6 +119,10 @@ function skirt(v) {
  ];
 }
 function draft(type,measurements) {
+ if(type==="hood") {
+   const generated=HoodSystem.prepare(measurements);
+   return {type,pieces:generated.parts,measurements:generated.profile.mm};
+ }
  if(type==="trousers") {
    const generated=PantsSystem.draft(measurements);
    return {type,pieces:generated.pieces,measurements:generated.measurements};
@@ -183,6 +188,7 @@ function offset(poly,mm) {
  return res;
 }
 function render(type,measurements,allowance=10,density=210) {
+ if(type==="hood")return HoodSystem.render(measurements,{allowanceMm:allowance,density});
  if(type==="top") return BodiceV2.render(measurements,allowance,density);
  if(type==="trousers") return PantsSystem.render(measurements,allowance,density);
  const d=draft(type,measurements);
