@@ -12,6 +12,7 @@
   <script defer src="./ruleset-registry.js"></script>
   <script defer src="./seam-contracts.js"></script>
   <script defer src="./hood-system.js"></script>
+  <script defer src="./hood-drape.js"></script>
   <script defer src="./garment-3d.js"></script>
   <script defer src="./pattern-library.js"></script>
   <script defer src="./drafting-system.js"></script>
@@ -23,7 +24,7 @@
   <div class="brand">
     <div class="brandmark">SC</div>
     <div><strong>SolidCraft</strong><span> / TextilLab Schnittatelier</span></div>
-    <span class="tag">v1.3 · HoodLab + 3D</span>
+    <span class="tag">v1.4 · Schnittgebundene 3D-Drapierung</span>
   </div>
   <div class="topactions">
     <span class="topnote">Online-Demo · Browser-Geometrie</span>
@@ -123,6 +124,43 @@
  </div>
  <div class="sectiontitle">KONSTRUKTIONSREGELN UND NAHTKONTROLLE</div>
  <div class="section" id="hoodRuleReport" aria-live="polite"></div>
+ <div class="sectiontitle">3D-ANPROBE · KÖRPER UND STOFF</div>
+ <div class="section hood-fit-panel">
+  <details class="measure-details" open>
+   <summary>Maßpuppe einstellen <span>(cm)</span></summary>
+   <div class="measure-grid">
+    <label class="measure-input"><span>Körpergröße</span><input id="fitHeight" type="number" min="70" max="225" step=".5" value="168"></label>
+    <label class="measure-input"><span>Schulterbreite</span><input id="fitShoulder" type="number" min="22" max="65" step=".5" value="41"></label>
+    <label class="measure-input"><span>Brustumfang</span><input id="fitChest" type="number" min="42" max="170" step=".5" value="94"></label>
+    <label class="measure-input"><span>Taillenumfang</span><input id="fitWaist" type="number" min="39" max="170" step=".5" value="75"></label>
+    <label class="measure-input"><span>Hüftumfang</span><input id="fitHip" type="number" min="42" max="190" step=".5" value="99"></label>
+    <label class="measure-input"><span>Halsumfang</span><input id="fitNeck" type="number" min="20" max="59" step=".5" value="35"></label>
+   </div>
+  </details>
+  <details class="measure-details" open>
+   <summary>Stoff und Drapierung</summary>
+   <label for="fabricPreset" class="fieldlabel">Stoff-Beispieltyp</label>
+   <select id="fabricPreset" class="full">
+    <option value="cotton">Baumwolle – mittlere Steifigkeit</option>
+    <option value="jersey">Jersey – weich / dehnbar</option>
+    <option value="denim">Denim – schwer / steif</option>
+    <option value="shell">Softshell – formstabil</option>
+   </select>
+   <div class="hood-fabric-sliders">
+    <label for="fabricStiffness">Zugsteifigkeit <output id="fabricStiffnessValue">0,53</output>
+     <input id="fabricStiffness" type="range" min=".03" max="1" step=".01" value=".53"></label>
+    <label for="fabricBending">Biegesteifigkeit <output id="fabricBendingValue">0,30</output>
+     <input id="fabricBending" type="range" min=".02" max="1" step=".01" value=".30"></label>
+    <label for="fabricDrape">Schwerkraft-Drapierung <output id="fabricDrapeValue">0,58</output>
+     <input id="fabricDrape" type="range" min="0" max="2" step=".02" value=".58"></label>
+    <label for="fabricClearance">Abstand zum Kopf (mm)
+     <input id="fabricClearance" type="number" min="2" max="35" step="1" value="9"></label>
+   </div>
+  </details>
+  <p class="hint">Stoffverhalten: begrenztes Feder-/Masse-Modell mit Schwerkraft und Kopfkollision. Kein kalibrierter Stoffsolver oder Nachweis der Passform.</p>
+  <div id="hoodDrapeReport" class="hood-drape-report" aria-live="polite">3D-Nähkanten und Stoffberechnung erscheinen nach der Konstruktion.</div>
+ </div>
+
  <div class="section"><p class="hint" id="hoodSourceNote">Damenwerte teilweise öffentlich dokumentiert. Kein geprüftes Serien-Schnittsystem.</p></div>
 </div>
 
@@ -261,6 +299,7 @@
         <div class="garment3d-tools" id="garment3dTools">
           <button id="garmentWire" type="button" aria-pressed="false" title="Drahtgitter an/aus">Draht</button>
           <button id="garmentBody" type="button" aria-pressed="true" title="Kopf-Referenz an/aus">Körper</button>
+          <button id="garmentFullBody" type="button" aria-pressed="false" title="Ganze Maßpuppe anzeigen">Ganzkörper</button>
           <button id="garmentReset" type="button" title="3D-Ansicht zurücksetzen">Ansicht</button>
           <button id="garmentObj" type="button" title="Schematisches 3D-Modell als OBJ exportieren">OBJ</button>
         </div>
