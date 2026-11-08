@@ -198,7 +198,7 @@ pub fn draft(m: Measurements) -> Result<Vec<BodicePanel>, String> {
 
 fn render_panel(
     panel: &BodicePanel,
-    offset: f64,
+    horizontal_offset: f64,
     mirrored: bool,
     seam_mm: f64,
 ) -> Result<String, String> {
@@ -213,7 +213,7 @@ fn render_panel(
     } else {
         0.0
     };
-    let tx = if mirrored { offset + cx } else { offset };
+    let tx = if mirrored { horizontal_offset + cx } else { horizontal_offset };
     let flip = if mirrored { " scale(-1 1)" } else { "" };
     let _ = writeln!(s, "<g transform=\"translate({tx:0.3} 0){flip}\">");
     let _=writeln!(s,"<path d=\"{}\" fill=\"#cb6953\" fill-opacity=\"0.04\" stroke=\"#a85145\" stroke-width=\"1.8\" stroke-linejoin=\"round\"/>",panel.svg_path);
@@ -245,9 +245,9 @@ fn render_panel(
     );
     s.push_str("</g>\n");
     let label_x = if mirrored {
-        offset + cx * 0.5
+        horizontal_offset + cx * 0.5
     } else {
-        offset + 110.0
+        horizontal_offset + 110.0
     };
     let label = if mirrored { "RT" } else { "VT" };
     let _=writeln!(s,"<text x=\"{label_x:0.3}\" y=\"{:0.3}\" text-anchor=\"middle\" font-size=\"24\" fill=\"#304a53\" font-weight=\"700\">{label}</text>",panel.hem_y-35.0);
