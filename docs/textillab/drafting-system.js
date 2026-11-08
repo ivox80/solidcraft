@@ -193,10 +193,11 @@ function layeredDrawing(base,d,profile,config,metric) {
   const fx=75,bx=fx+fw+100,ax=bx+bw+100,ay=95;
   const bwMax=Math.max(...sleeve.outline.map(p=>p[0]));
   const positions={VT:p=>pt(fx+p[0],p[1]),RT:p=>pt(bx+bw-p[0],p[1]),AR:p=>pt(ax+p[0],ay+p[1])};
+  const hasSleeve=profile.style.sleeves;
   const boundaries={
     VT:{x0:fx,x1:fx+fw,piece:vt},
     RT:{x0:bx,x1:bx+bw,piece:rt},
-    AR:{x0:ax,x1:ax+bwMax,piece:sleeve}
+    ...(hasSleeve?{AR:{x0:ax,x1:ax+bwMax,piece:sleeve}}:{})
   };
   const parts=[];
   parts.push('<g id="textillab-construction-overlay" data-overlay-version="1.0">');
@@ -225,6 +226,7 @@ function layeredDrawing(base,d,profile,config,metric) {
   if(L.points){
     parts.push('<g id="layer-construction-points">');
     const all=namedPoints(d);
+    if(!hasSleeve)delete all.AR;
     for(const [id,points]of Object.entries(all))for(const point of points){
       const [x,y]=positions[id](point.xy);
       parts.push('<circle cx="'+x+'" cy="'+y+'" r="3" fill="#7edbe2" stroke="#14202e" stroke-width=".8"><title>'+
@@ -246,10 +248,10 @@ function layeredDrawing(base,d,profile,config,metric) {
     const y=vt.points.bustY;
     parts.push(dimension(positions.VT(pt(0,y)),positions.VT(pt(f.bustPoint[0],y)),45,"BPA",
       "BP/2 "+(profile.measurements.bustSpan/2).toFixed(1)+" cm","bustSpan"));
-    parts.push(dimension(positions.AR(pt(sleeve.grain[0],0)),
+    if(hasSleeve)parts.push(dimension(positions.AR(pt(sleeve.grain[0],0)),
       positions.AR(pt(sleeve.grain[0],sleeve.points.hemY)),35,"ÄL",
       "ÄL "+profile.measurements.sleeve.toFixed(1)+" cm","sleeve"));
-    parts.push(dimension(positions.AR(pt(0,sleeve.points.bicepY)),
+    if(hasSleeve)parts.push(dimension(positions.AR(pt(0,sleeve.points.bicepY)),
       positions.AR(pt(bwMax,sleeve.points.bicepY)),22,"OU",
       "OB "+profile.measurements.upperArm.toFixed(1)+" cm","upperArm"));
     parts.push('</g>');
@@ -266,18 +268,18 @@ function layeredDrawing(base,d,profile,config,metric) {
         parts.push(line(pt(region.x0+8,y),pt(region.x1-8,y),"#d18ff2","6 4","1.15"));
       parts.push(label(boundaries.RT.x1+20,y-7,"K-"+zone,"start","#e7b4ff",11));
     }
-    parts.push(line(pt(ax+5,elbowY),pt(ax+bwMax-5,elbowY),"#d18ff2","6 4","1.15"));
-    parts.push(label(ax+bwMax+10,elbowY-7,"K-Ä","start","#e7b4ff",11));
+    if(hasSleeve)parts.push(line(pt(ax+5,elbowY),pt(ax+bwMax-5,elbowY),"#d18ff2","6 4","1.15"));
+    if(hasSleeve)parts.push(label(ax+bwMax+10,elbowY-7,"K-Ä","start","#e7b4ff",11));
     parts.push('</g>');
   }
   if(L.notes){
     parts.push('<g id="layer-rule-notes">');
     const note="Armloch "+fmt(metric.totalArmholeMm)+" mm · Ärmelkugel "+
       fmt(metric.sleeveCapMm)+" mm · Einhalteweite "+fmt(metric.sleeveEaseMm)+" mm";
-    parts.push(label(ax,ay+sleeve.points.hemY+38,note,"start","#a8c8d9",11));
+    if(hasSleeve)parts.push(label(ax,ay+sleeve.points.hemY+38,note,"start","#a8c8d9",11));
     const state=metric.sleeveEaseMm<0?"ACHTUNG: negative Einhalteweite":
       metric.sideDifferenceMm>5?"Seitennahtbalance überprüfen":"Kurvenlängen numerisch geprüft";
-    parts.push(label(ax,ay+sleeve.points.hemY+54,state,"start",
+    if(hasSleeve)parts.push(label(ax,ay+sleeve.points.hemY+54,state,"start",
       metric.sleeveEaseMm<0?"#ffa799":"#8fd4c2",10));
     parts.push('</g>');
   }
