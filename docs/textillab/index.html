@@ -3,8 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>SolidCraft · TextilLab Studio</title>
+  <title>SolidCraft · TextilLab Schnittatelier</title>
   <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="./studio-workspace.css">
   <script defer src="./browser-engine.js"></script>
   <script defer src="./bodice-v2.js"></script>
   <script defer src="./pants-system.js"></script>
@@ -12,13 +13,14 @@
   <script defer src="./pattern-library.js"></script>
   <script defer src="./drafting-system.js"></script>
   <script defer src="./app.js"></script>
+  <script defer src="./studio-workspace.js"></script>
 </head>
 <body>
 <header class="topbar">
   <div class="brand">
     <div class="brandmark">SC</div>
-    <div><strong>SolidCraft</strong><span> / TextilLab Studio</span></div>
-    <span class="tag">v1.0 · Konstruktions-CAD</span>
+    <div><strong>SolidCraft</strong><span> / TextilLab Schnittatelier</span></div>
+    <span class="tag">v1.2 · Grafisches Schnittatelier</span>
   </div>
   <div class="topactions">
     <span class="topnote">Online-Demo · Browser-Geometrie</span>
@@ -26,6 +28,15 @@
     <button id="exportBtn" class="btn primary" disabled>SVG exportieren</button>
   </div>
 </header>
+<nav id="templateStrip" class="template-strip" aria-label="Grundschnitt auswählen"></nav>
+<div class="workflow-bar" role="group" aria-label="Konstruktionsablauf">
+  <span class="workflow-caption">ARBEITSABLAUF</span>
+  <button type="button" class="workflow-step is-active" data-step="template"><span>01</span> Vorlage</button>
+  <button type="button" class="workflow-step" data-step="measure"><span>02</span> Maße</button>
+  <button type="button" class="workflow-step" data-step="construction"><span>03</span> Konstruktion</button>
+  <button type="button" class="workflow-step" data-step="check"><span>04</span> Prüfen</button>
+  <div id="workspaceContext" class="workflow-context">Grundschnitt wählen</div>
+</div>
 <main class="workbench">
   <aside class="sidebar">
     <div class="sectiontitle">GRUNDSCHNITT-BIBLIOTHEK</div>
@@ -197,25 +208,44 @@
       <div class="panefooter"><span id="meshStats">Keine Geometrie</span><span id="faceInfo">Kante wählen</span></div>
     </section>
     <section class="pane cutpane">
-      <div class="panelbar"><div><span class="panelid">02</span> 2D-Schnittmuster <span class="muted small">· automatische Abwicklung</span></div><span class="mini">SVG</span></div>
+      <div class="panelbar"><div><span class="panelid">02</span> <span id="drawingPaneTitle">2D-Schnittmuster</span> <span class="muted small">· parametrische Zeichnung</span></div>
+<div class="drawing-tools" role="group" aria-label="Zeichnung bedienen">
+ <button type="button" id="zoomOut" title="Zeichnung verkleinern" aria-label="Verkleinern">−</button>
+ <output id="zoomValue" aria-label="Zoom">100%</output>
+ <button type="button" id="zoomIn" title="Zeichnung vergrößern" aria-label="Vergrößern">+</button>
+ <button type="button" id="zoomFit" title="Zeichnung einpassen">Einpassen</button>
+ <button type="button" id="focusDrawing" title="Zeichnung maximieren" aria-pressed="false">Fokus</button>
+</div></div>
       <div class="previewcontainer" id="previewContainer">
-        <div id="preview" class="preview">
+        <div id="preview" class="preview" role="region" aria-label="Interaktive technische Schnittzeichnung">
           <div class="placeholder">Schnittmuster wird berechnet …</div>
         </div>
-        <div class="legend"><span><i class="legendcut"></i> Zuschnittkante</span><span><i class="legendsew"></i> Nahtlinie</span></div>
+        <div class="legend"><span><i class="legendcut"></i> Zuschnitt</span><span><i class="legendsew"></i> Naht</span><span><i class="legendguide"></i> Konstruktion</span></div>
+<div class="drawing-hint" id="drawingHint">Schnittteile anklicken, um sie auszuwählen · Maße direkt bearbeiten</div>
       </div>
       <div class="panefooter"><span>Maßstab: Modell-Einheiten → mm</span><span id="errorDetail"></span></div>
     </section>
   </div>
   <aside class="inspector">
-    <div class="sectiontitle">ERGEBNISSE</div>
+    <div class="inspector-status">
+  <span class="inspector-kicker">AKTUELLES SCHNITTTEIL</span>
+  <strong id="selectedPieceTitle">Noch nichts gewählt</strong>
+  <p id="selectedPieceInfo">Wähle in der Zeichnung ein Schnittteil aus.</p>
+</div>
+<div class="sectiontitle">ERGEBNISSE</div>
     <div class="metric"><span>Schnittteile</span><strong id="pieces">–</strong></div>
     <div class="metric"><span>Nahtfläche</span><strong id="sewnArea">–</strong><small>m²</small></div>
     <div class="metric"><span>Zuschnittfläche</span><strong id="cutArea">–</strong><small>m²</small></div>
     <div class="metric"><span>Stoffgewicht (ca.)</span><strong id="mass">–</strong><small>g</small></div>
 <div class="sectiontitle withgap top-only">KONSTRUKTIONSREGELN</div>
     <div id="draftRuleReport" class="rule-report top-only"></div>
-    <div class="sectiontitle withgap">HINWEISE</div>
+    <div class="source-reference pants-only" id="systemSourceReference">
+  <div class="inspector-kicker">REFERENZ · MÜLLER &amp; SOHN</div>
+  <p>Grundschnitt Standardhose – Vorlage für unseren fachlichen Abgleich, noch nicht als Konstruktionsregeln übernommen.</p>
+  <a href="https://www.muellerundsohn.com/allgemein/schnittmuster-grundschnitt-hose-und-bundfaltenhose/" target="_blank" rel="noopener noreferrer">Original-Konstruktion beim Verlag ansehen ↗</a>
+  <a href="./examples/trousers-v11.svg" target="_blank" rel="noopener noreferrer">Aktueller TextilLab-Prototyp ↗</a>
+</div>
+<div class="sectiontitle withgap">HINWEISE</div>
     <p class="inspectorcopy">Diese kostenlose Online-Vorschau verwendet eine JavaScript-Umsetzung der Kerngeometrie. Die installierbare TextilLab-Version berechnet mit Rust. Aktuell sind abwickelbare Dreiecksnetze und konvexe Zuschnittkonturen mit Nahtzugabe unterstützt.</p>
     <p class="inspectorcopy">Doppelt gekrümmte Flächen benötigen später Dehnungsoptimierung und automatische Teilungsnähte.</p>
   </aside>
