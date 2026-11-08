@@ -225,8 +225,10 @@ function catalogMeasurements() {
     result[name] = $("m-" + name).value;
   }
   for (const name of Object.keys(TextilLabPantsSystem.defaults)) {
-    if (!Object.hasOwn(result,name)) result[name] = $("m-" + name).value;
-    else if (name === "waist" || name === "hip" || name === "inseam") result[name] = $("m-" + name).value;
+    // Shared body values live in the general panel; pants-only waistToHip
+    // intentionally has a separate input (avoids duplicate HTML IDs).
+    const id=name==="waistToHip"?"m-pantsWaistToHip":"m-"+name;
+    if (!Object.hasOwn(result,name) || (name==="waistToHip"&&$("templateType").value==="trousers")) result[name] = $(id).value;
   }
   return result;
 }
@@ -363,6 +365,26 @@ function showPantsComparison(reference,draft) {
   }
 }
 
+function createPieceThumbnail(part) {
+  // Draw a real miniature from the computed cutting contour (not a stock icon).
+  const points=(part.outline||[]).map(p=>Array.isArray(p)?p:[p.x,p.y]);
+  if(points.length<3||points.some(p=>p.length<2||!p.every(Number.isFinite)))return null;
+  const minX=Math.min(...points.map(p=>p[0])),maxX=Math.max(...points.map(p=>p[0]));
+  const minY=Math.min(...points.map(p=>p[1])),maxY=Math.max(...points.map(p=>p[1]));
+  const scale=Math.min(67/Math.max(1,maxX-minX),85/Math.max(1,maxY-minY));
+  const ox=8+(67-(maxX-minX)*scale)/2,oy=8+(85-(maxY-minY)*scale)/2;
+  const svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
+  svg.setAttribute("viewBox","0 0 83 101");
+  svg.setAttribute("aria-hidden","true");
+  svg.classList.add("piece-thumb");
+  const polygon=document.createElementNS("http://www.w3.org/2000/svg","polygon");
+  polygon.setAttribute("points",points.map(p=>
+    [(ox+(p[0]-minX)*scale).toFixed(2),(oy+(p[1]-minY)*scale).toFixed(2)].join(",")
+  ).join(" "));
+  svg.appendChild(polygon);
+  return svg;
+}
+
 function updateCatalog() {
   const kind = $("templateType").value;
   const name = TextilLabPatternLibrary.types.find(x => x[0] === kind)?.[1] || kind;
@@ -403,7 +425,11 @@ function updateCatalog() {
       const heading = document.createElement("strong");
       heading.textContent = part.name + " · " + part.count + "×" + (part.fold ? " · Stoffbruch" : "");
       const info = document.createElement("span"); info.textContent = part.notes || "Schnittteil";
-      item.append(heading, info);
+      const thumb=createPieceThumbnail(part);
+      const copy=document.createElement("div");copy.className="piece-copy";
+      copy.append(heading,info);
+      if(thumb)item.appendChild(thumb);
+      item.appendChild(copy);
       catalog.appendChild(item);
     }
     const caution = document.createElement("div");
@@ -559,11 +585,16 @@ $("templateType").addEventListener("change", () => {
   draw();
 });
 for (const key of [...new Set([...Object.keys(TextilLabPatternLibrary.defaults), ...Object.keys(TextilLabBodiceV2.defaults), ...Object.keys(TextilLabPantsSystem.defaults)])]) {
-  $("m-" + key).addEventListener("input", () => {
+  const input=$("m-"+key);
+  input.addEventListener("input", () => {
     if(key==="ease")$("draftFit").value="custom";
     if ($("templateType").value !== "mesh") {updateCatalog();checkpointDraft();}
   });
 }
+// Pants-specific waist-to-hip input is distinct from the top drafting input.
+$("m-pantsWaistToHip").addEventListener("input",()=>{
+  if($("templateType").value==="trousers")updateCatalog();
+});
 
 function draftChanged() {
   if($("templateType").value==="top"){

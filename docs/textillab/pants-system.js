@@ -219,7 +219,7 @@
     lines.push('<text x="35" y="43" fill="#9db4c5" font-size="11">Türkis: Naht · Orange: Zuschnitt · Gelb: Fadenlauf · Rosa: Abnäher</text>');
     for(const s of spans){
       const p=s.part,ox=x-s.minx,oy=65-s.miny;
-      lines.push('<g transform="translate('+fmt(ox)+' '+fmt(oy)+')">');
+      lines.push('<g transform="translate('+fmt(ox)+' '+fmt(oy)+')" data-piece-id="'+p.id+'">');
       lines.push('<path d="'+p.svgPath+'" fill="#264554" fill-opacity=".36" stroke="#7cdae1" stroke-width="1.7" stroke-dasharray="4 3" stroke-linejoin="round"/>');
       if(mm>0)lines.push('<polygon points="'+ptString(s.o)+'" fill="none" stroke="#f4a670" stroke-width="1.15" stroke-linejoin="round"/>');
       const extremes=[Math.min(...p.outline.map(v=>v[0])),Math.max(...p.outline.map(v=>v[0]))];
@@ -245,11 +245,15 @@
       }
       if(layers.dimensions){
         const referenceY=p.levels.knee;
+        lines.push('<g class="tl-dimension" data-measure="knee">');
         lines.push('<path d="M '+fmt(extremes[0])+' '+fmt(referenceY+24)+' H '+fmt(extremes[1])+'" stroke="#a2dbe5" stroke-width=".9"/>');
         lines.push('<text x="'+fmt(extremes[1]-5)+'" y="'+fmt(referenceY+19)+'" text-anchor="end" fill="#e0f2f6" font-size="11">Kn '+(d.bodyValues.knee/2).toFixed(1)+' cm / Schnittpaar</text>');
+        lines.push("</g>");
         const dx=extremes[1]+34,y0=0,y1=p.levels.hem;
+        lines.push('<g class="tl-dimension" data-measure="outseam">');
         lines.push('<path d="M '+fmt(dx)+' '+fmt(y0)+' V '+fmt(y1)+'" stroke="#a2dbe5" stroke-width=".9"/>');
         lines.push('<text x="'+fmt(dx+8)+'" y="'+fmt((y0+y1)/2)+'" fill="#e0f2f6" font-size="11">SL '+d.bodyValues.outseam.toFixed(1)+' cm</text>');
+        lines.push("</g>");
       }
       lines.push('</g>');
       if(layers.labels)lines.push('<text x="'+fmt(x+(s.maxx-s.minx)/2)+'" y="59" text-anchor="middle" fill="#e0edf7" font-size="13" font-weight="700">'+p.id+' · '+p.name+' · 2×</text>');
