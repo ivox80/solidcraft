@@ -211,8 +211,10 @@ fn panel(m:PantsMeasures,back:bool)->PantsPanel {
     let b=pt(wh,if back {5.0}else{8.0});
     let side_hip=pt(hh,hy);
     let center_hip=pt(-hh,hy);
-    let side_rise=pt(hh+if back {15.0}else{12.0},rise);
     let inner_rise=pt(-hh-ext,rise);
+    let intended_thigh_width=m.thigh_mm/2.0+if back {10.0}else{-10.0};
+    let side_rise=pt((hh+if back {15.0}else{12.0})*.65
+        +(inner_rise.x+intended_thigh_width)*.35,rise);
     let side_knee=pt(kw/2.0,ky);
     let inner_knee=pt(-kw/2.0,ky);
     let side_hem=pt(hem_w/2.0,ey);
