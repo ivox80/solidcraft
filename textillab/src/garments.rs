@@ -62,6 +62,15 @@ pub struct Measurements {
     pub hand_mm: f64,
     pub hand_length_mm: f64,
     pub ease_mm: f64,
+    pub front_length_mm: f64,
+    pub back_waist_mm: f64,
+    pub bust_height_mm: f64,
+    pub bust_span_mm: f64,
+    pub neck_mm: f64,
+    pub armhole_depth_mm: f64,
+    pub waist_to_hip_mm: f64,
+    pub hem_below_waist_mm: f64,
+    pub shoulder_slope_mm: f64,
 }
 impl Default for Measurements {
     fn default() -> Self {
@@ -77,6 +86,15 @@ impl Default for Measurements {
             hand_mm: 220.0,
             hand_length_mm: 190.0,
             ease_mm: 80.0,
+            front_length_mm: 460.0,
+            back_waist_mm: 430.0,
+            bust_height_mm: 270.0,
+            bust_span_mm: 190.0,
+            neck_mm: 380.0,
+            armhole_depth_mm: 230.0,
+            waist_to_hip_mm: 200.0,
+            hem_below_waist_mm: 290.0,
+            shoulder_slope_mm: 30.0,
         }
     }
 }
@@ -98,11 +116,20 @@ impl Measurements {
             "hand" => self.hand_mm = mm,
             "handLength" => self.hand_length_mm = mm,
             "ease" => self.ease_mm = mm,
+            "frontLength" => self.front_length_mm = mm,
+            "backWaist" => self.back_waist_mm = mm,
+            "bustHeight" => self.bust_height_mm = mm,
+            "bustSpan" => self.bust_span_mm = mm,
+            "neck" => self.neck_mm = mm,
+            "armholeDepth" => self.armhole_depth_mm = mm,
+            "waistToHip" => self.waist_to_hip_mm = mm,
+            "hemBelowWaist" => self.hem_below_waist_mm = mm,
+            "shoulderSlope" => self.shoulder_slope_mm = mm,
             _ => return Err(format!("Unknown measurement: {key}")),
         }
         Ok(())
     }
-    fn validate(&self) -> Result<(), String> {
+    pub(crate) fn validate(&self) -> Result<(), String> {
         let all = [
             self.chest_mm,
             self.waist_mm,
@@ -115,6 +142,15 @@ impl Measurements {
             self.hand_mm,
             self.hand_length_mm,
             self.ease_mm,
+            self.front_length_mm,
+            self.back_waist_mm,
+            self.bust_height_mm,
+            self.bust_span_mm,
+            self.neck_mm,
+            self.armhole_depth_mm,
+            self.waist_to_hip_mm,
+            self.hem_below_waist_mm,
+            self.shoulder_slope_mm,
         ];
         if all
             .iter()
@@ -124,6 +160,9 @@ impl Measurements {
         }
         if self.shoulder_mm > self.chest_mm * 0.8 || self.waist_mm > self.hip_mm * 1.6 {
             return Err("Check body measurements (shoulders/waist)".into());
+        }
+        if self.bust_height_mm >= self.front_length_mm-40.0 || self.waist_to_hip_mm >= self.hem_below_waist_mm || self.armhole_depth_mm >= self.front_length_mm*0.83 {
+            return Err("Invalid bodice height relationships".into());
         }
         Ok(())
     }
@@ -433,29 +472,7 @@ fn skirt(m: Measurements) -> Vec<Piece> {
 pub fn draft(kind: Garment, m: Measurements) -> Result<Vec<Piece>, String> {
     m.validate()?;
     Ok(match kind {
-        Garment::Top => vec![
-            piece(
-                "Vorderteil",
-                bodice(m, true, false),
-                1,
-                true,
-                "Neck/armhole are approximations",
-            ),
-            piece(
-                "Rueckenteil",
-                bodice(m, false, false),
-                1,
-                true,
-                "Center cut on fold",
-            ),
-            piece(
-                "Aermel",
-                sleeve(m, false),
-                2,
-                false,
-                "Sleeve cap requires fitting",
-            ),
-        ],
+        Garment::Top => crate::bodice_v2::draft(m)?.into_iter().map(|b|b.piece).collect(),
         Garment::Jacket => vec![
             piece(
                 "Jacke vorne",
@@ -499,7 +516,7 @@ pub fn draft(kind: Garment, m: Measurements) -> Result<Vec<Piece>, String> {
     })
 }
 
-fn area(poly: &[Point]) -> f64 {
+pub(crate) fn area(poly: &[Point]) -> f64 {
     poly.iter()
         .enumerate()
         .map(|(i, a)| {
@@ -509,7 +526,7 @@ fn area(poly: &[Point]) -> f64 {
         .sum::<f64>()
         * 0.5
 }
-fn offset(poly: &[Point], distance: f64) -> Result<Vec<Point>, String> {
+pub(crate) fn offset(poly: &[Point], distance: f64) -> Result<Vec<Point>, String> {
     if distance == 0.0 {
         return Ok(poly.to_vec());
     }
@@ -556,7 +573,7 @@ fn offset(poly: &[Point], distance: f64) -> Result<Vec<Point>, String> {
     }
     Ok(result)
 }
-fn svg_points(poly: &[Point]) -> String {
+pub(crate) fn svg_points(poly: &[Point]) -> String {
     let mut s = String::new();
     for p in poly {
         let _ = write!(s, "{:.3},{:.3} ", p.x, p.y);
@@ -584,6 +601,9 @@ pub fn export_svg(
     }
     if !density_g_m2.is_finite() || !(1.0..=5000.0).contains(&density_g_m2) {
         return Err("Areal density must be between 1 and 5000 g/m2".into());
+    }
+    if kind == Garment::Top {
+        return crate::bodice_v2::export(m, seam_mm, density_g_m2);
     }
     let parts = draft(kind, m)?;
     let mut shapes = String::new();
