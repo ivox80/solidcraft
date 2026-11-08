@@ -51,3 +51,25 @@ select.full,.btn.full{width:100%}.inputunit{display:flex;align-items:center;gap:
 .bodice-v2-mode .preview{padding:6px}
 .bodice-v2-mode #preview svg{box-shadow:0 6px 34px #07141e65;border:1px solid #2c485b}
 .bodice-v2-mode .legend{background:#293d4ade}
+
+/* TextilLab v1.0 technical drafting workspace */
+.v1-panel{border-top:1px solid #355267;margin-top:12px;padding-top:7px}
+.v1-panel>.sectiontitle{color:#83d4dc}
+.v1-panel .fieldrow select{max-width:128px}
+.v1-actions{display:flex;gap:7px;flex-wrap:wrap;margin:11px 0}
+.v1-actions .btn{font-size:11px;padding:7px 9px;flex:1;text-align:center}
+.layer-grid{display:grid;grid-template-columns:1fr;gap:9px}
+.layer-grid label{display:flex;align-items:center;gap:7px;color:#bfcedd;font-size:11px;cursor:pointer}
+.layer-grid input{accent-color:#56c8d5}
+#draftRuleReport{font-size:11px;line-height:1.55}
+#draftRuleReport .draft-check{border-left:3px solid #71c8cc;margin:8px 0;padding:7px 8px;background:#223644;border-radius:3px;white-space:normal}
+#draftRuleReport .draft-check.warning{border-color:#eea16e}
+#draftRuleReport .rule-line{display:flex;align-items:baseline;justify-content:space-between;gap:6px;border-bottom:1px solid #2b4053;padding:5px 0}
+#draftRuleReport .rule-line strong{font-size:11px;color:#bcd9e1;font-weight:600}
+#draftRuleReport .rule-line span{color:#8bb2c2;text-align:right;font-variant-numeric:tabular-nums}
+.bodice-v2-mode #preview svg .tl-dimension{cursor:pointer;pointer-events:all}
+.bodice-v2-mode #preview svg .tl-dimension:hover{filter:drop-shadow(0 0 3px #bdefff)}
+.bodice-v2-mode #preview svg #layer-construction-points circle{pointer-events:visiblePainted}
+.bodice-v2-mode .previewcontainer .legend{background:#14202ee0}
+.v1-help{font-size:11px;color:#99abbc;margin-top:7px}
+@media(max-width:1300px){.v1-panel .measure-grid{grid-template-columns:1fr 1fr}}
