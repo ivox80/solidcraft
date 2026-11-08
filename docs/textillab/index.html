@@ -6,6 +6,7 @@
   <title>SolidCraft · TextilLab Studio</title>
   <link rel="stylesheet" href="./style.css">
   <script defer src="./browser-engine.js"></script>
+  <script defer src="./bodice-v2.js"></script>
   <script defer src="./pattern-library.js"></script>
   <script defer src="./app.js"></script>
 </head>
@@ -14,7 +15,7 @@
   <div class="brand">
     <div class="brandmark">SC</div>
     <div><strong>SolidCraft</strong><span> / TextilLab Studio</span></div>
-    <span class="tag">v0.6 · Grundschnitte</span>
+    <span class="tag">v0.7 · VT/RT Grundschnitt</span>
   </div>
   <div class="topactions">
     <span class="topnote">Online-Demo · Browser-Geometrie</span>
@@ -28,7 +29,7 @@
     <div class="section">
       <label for="templateType" class="fieldlabel">Vorlage wählen</label>
       <select id="templateType" class="full">
-        <option value="top">Oberteil / T-Shirt</option>
+        <option value="top">Oberteil – VT / RT Grundschnitt v2</option>
         <option value="jacket">Jacke</option>
         <option value="trousers">Hose</option>
         <option value="glove">Handschuh</option>
@@ -51,7 +52,7 @@
 <label class="measure-input"><span>Handlänge</span><input id="m-handLength" type="number" min="1" max="300" step="0.5" value="19" aria-label="Handlänge in Zentimeter"></label>
 <label class="measure-input"><span>Mehrweite</span><input id="m-ease" type="number" min="1" max="300" step="0.5" value="8" aria-label="Mehrweite in Zentimeter"></label></div>
       </details>
-      <div class="hint">Grundschnitt-Prototypen: Maße und Mehrweite anpassen, Passform mit Probeteil prüfen.</div>
+      <details class="measure-details top-only" open><summary>Oberteil v2 · Konstruktionsmaße <span>(cm)</span></summary><div class="measure-grid"><label class="measure-input"><span>Vorderlänge bis Taille</span><input id="m-frontLength" type="number" min="0.5" max="300" step="0.5" value="46" aria-label="Vorderlänge bis Taille in Zentimeter"></label><label class="measure-input"><span>Rückenlänge bis Taille</span><input id="m-backWaist" type="number" min="0.5" max="300" step="0.5" value="43" aria-label="Rückenlänge bis Taille in Zentimeter"></label><label class="measure-input"><span>Brusthöhe</span><input id="m-bustHeight" type="number" min="0.5" max="300" step="0.5" value="27" aria-label="Brusthöhe in Zentimeter"></label><label class="measure-input"><span>Brustpunktabstand</span><input id="m-bustSpan" type="number" min="0.5" max="300" step="0.5" value="19" aria-label="Brustpunktabstand in Zentimeter"></label><label class="measure-input"><span>Halsumfang</span><input id="m-neck" type="number" min="0.5" max="300" step="0.5" value="38" aria-label="Halsumfang in Zentimeter"></label><label class="measure-input"><span>Armlochtiefe</span><input id="m-armholeDepth" type="number" min="0.5" max="300" step="0.5" value="23" aria-label="Armlochtiefe in Zentimeter"></label><label class="measure-input"><span>Taille bis Hüfte</span><input id="m-waistToHip" type="number" min="0.5" max="300" step="0.5" value="20" aria-label="Taille bis Hüfte in Zentimeter"></label><label class="measure-input"><span>Taille bis Saum</span><input id="m-hemBelowWaist" type="number" min="0.5" max="300" step="0.5" value="29" aria-label="Taille bis Saum in Zentimeter"></label><label class="measure-input"><span>Schulterabfall</span><input id="m-shoulderSlope" type="number" min="0.5" max="300" step="0.5" value="3" aria-label="Schulterabfall in Zentimeter"></label></div><div class="hint">VT und RT mit Brust-, Taillen- und Hüftlinien, Schulter- und Taillenabnähern, Fadenlauf.</div></details><div class="hint">Grundschnitt-Prototypen: Maße und Mehrweite anpassen, Passform mit Probeteil prüfen.</div>
     </div>
     
     <div class="sectiontitle mesh-only">TEXTIL-PROJEKT</div>

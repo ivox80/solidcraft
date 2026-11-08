@@ -221,12 +221,16 @@ function catalogMeasurements() {
   for (const name of Object.keys(TextilLabPatternLibrary.defaults)) {
     result[name] = $("m-" + name).value;
   }
+  for (const name of Object.keys(TextilLabBodiceV2.defaults)) {
+    result[name] = $("m-" + name).value;
+  }
   return result;
 }
 function updateCatalog() {
   const kind = $("templateType").value;
   const name = TextilLabPatternLibrary.types.find(x => x[0] === kind)?.[1] || kind;
   document.body.classList.add("library-mode");
+  document.body.classList.toggle("bodice-v2-mode", kind === "top");
   $("modelPanelTitle").textContent = "Grundschnitt · " + name;
   try {
     const result = TextilLabPatternLibrary.render(
@@ -278,7 +282,7 @@ async function updatePreview() {
     updateCatalog();
     return;
   }
-  document.body.classList.remove("library-mode");
+  document.body.classList.remove("library-mode", "bodice-v2-mode");
   $("modelPanelTitle").textContent = "3D-Modell · Schnittlinien bearbeiten";
   if (!state.source) return;
   $("errorDetail").textContent = "";
@@ -404,7 +408,7 @@ $("templateType").addEventListener("change", () => {
   updatePreview();
   draw();
 });
-for (const key of Object.keys(TextilLabPatternLibrary.defaults)) {
+for (const key of [...Object.keys(TextilLabPatternLibrary.defaults), ...Object.keys(TextilLabBodiceV2.defaults)]) {
   $("m-" + key).addEventListener("input", () => {
     if ($("templateType").value !== "mesh") updateCatalog();
   });

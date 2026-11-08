@@ -5,6 +5,7 @@
 (function(root) {
 "use strict";
 const p=(x,y)=>[x,y], PI=Math.PI;
+const BodiceV2=(typeof module!=="undefined"&&module.exports)?require("./bodice-v2.js"):root.TextilLabBodiceV2;
 const D={
  chest:100,waist:84,hip:102,back:65,shoulder:44,sleeve:62,
  inseam:80,head:57,hand:22,handLength:19, ease:8
@@ -139,6 +140,10 @@ function skirt(v) {
 }
 function draft(type,measurements) {
  const v=values(measurements);
+ if(type==="top") {
+   const result=BodiceV2.draft(measurements);
+   return {type,pieces:result.pieces,measurements:v};
+ }
  let pieces;
  switch(type) {
  case "top":
@@ -196,6 +201,7 @@ function offset(poly,mm) {
  return res;
 }
 function render(type,measurements,allowance=10,density=210) {
+ if(type==="top") return BodiceV2.render(measurements,allowance,density);
  const d=draft(type,measurements);
  const seam=Number(allowance),weight=Number(density);
  if(!Number.isFinite(seam)||seam<0||seam>80) throw Error("Nahtzugabe 0–80 mm wählen.");
