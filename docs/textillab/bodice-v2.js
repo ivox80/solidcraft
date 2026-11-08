@@ -30,7 +30,7 @@ const area=points=>points.reduce((sum,p,i)=>{
 const pointLine=(p1,p2,t)=>P(p1[0]*(1-t)+p2[0]*t,p1[1]*(1-t)+p2[1]*t);
 const fmt=n=>Number(n.toFixed(3));
 function measureValues(input={}) {
-  const defaults={chest:100,waist:84,hip:102,shoulder:44,ease:8,...DEFAULTS};
+  const defaults={chest:100,waist:84,hip:102,shoulder:44,sleeve:62,ease:8,...DEFAULTS};
   const result={};
   for(const [name,v] of Object.entries(defaults)){
     const n=Number(input[name]??v);
