@@ -100,7 +100,10 @@ fn draft_panel(m: Measurements, front: bool) -> BodicePanel {
     );
     shape.line(Point::new(shoulder_x, top_y + slope));
     shape.cubic(
-        Point::new(shoulder_x + 8.0, top_y + slope + (arm_y - top_y - slope) * 0.12),
+        Point::new(
+            shoulder_x + 8.0,
+            top_y + slope + (arm_y - top_y - slope) * 0.12,
+        ),
         Point::new(chest_w - 47.0, arm_y - 12.0),
         Point::new(chest_w, arm_y),
         30,
@@ -214,7 +217,10 @@ pub fn draft_sleeve(m: Measurements) -> Result<SleevePanel, String> {
 }
 
 /// Override is the cap height in mm, used by the seam-length optimizer.
-pub fn draft_sleeve_with_cap(m: Measurements, height_override: Option<f64>) -> Result<SleevePanel, String> {
+pub fn draft_sleeve_with_cap(
+    m: Measurements,
+    height_override: Option<f64>,
+) -> Result<SleevePanel, String> {
     m.validate()?;
     if m.upper_arm_mm <= m.wrist_mm || m.upper_arm_mm > m.chest_mm * 0.8 {
         return Err("Upper arm and wrist circumference are inconsistent".into());
@@ -450,12 +456,19 @@ pub fn export_with_options(
     let sleeve_dx = back_dx + back_width + 100.0;
     let sleeve_dy = 95.0;
     let sleeve_width = sleeve.piece.outline.iter().map(|p| p.x).fold(0.0, f64::max);
-    let width = if include_sleeves { sleeve_dx + sleeve_width + 95.0 } else {back_dx + back_width + 110.0};
-    let height = panels
-        .iter()
-        .map(|p| p.hem_y)
-        .fold(if include_sleeves {sleeve.cuff_y+sleeve_dy} else {0.0}, f64::max)
-        + 90.0;
+    let width = if include_sleeves {
+        sleeve_dx + sleeve_width + 95.0
+    } else {
+        back_dx + back_width + 110.0
+    };
+    let height = panels.iter().map(|p| p.hem_y).fold(
+        if include_sleeves {
+            sleeve.cuff_y + sleeve_dy
+        } else {
+            0.0
+        },
+        f64::max,
+    ) + 90.0;
     let mut sewn = 0.0;
     let mut cut = 0.0;
     for panel in &panels {
@@ -493,7 +506,9 @@ pub fn export_with_options(
     }
     svg.push_str(&render_panel(&panels[0], front_dx, false, seam_mm)?);
     svg.push_str(&render_panel(&panels[1], back_dx, true, seam_mm)?);
-    if include_sleeves {svg.push_str(&render_sleeve(&sleeve, sleeve_dx, sleeve_dy, seam_mm)?);}
+    if include_sleeves {
+        svg.push_str(&render_sleeve(&sleeve, sleeve_dx, sleeve_dy, seam_mm)?);
+    }
     let _ = writeln!(
         svg,
         "<text x=\"{front_dx:.3}\" y=\"30\" font-size=\"17\" font-weight=\"700\" fill=\"#e4eff7\">TEXTILLAB · OBERTEIL · VT / RT / ÄRMEL</text>"
@@ -503,7 +518,7 @@ pub fn export_with_options(
         "<text x=\"{front_dx:.3}\" y=\"51\" font-size=\"12\" fill=\"#9bafc1\">Türkis: Nahtlinie · Orange: Zuschnitt · FDL / Abnäher / Referenzlinien</text>"
     );
     if include_sleeves {
-    let _ = writeln!(
+        let _ = writeln!(
         svg,
         "<text x=\"{sleeve_dx:.3}\" y=\"{:.3}\" font-size=\"14\" font-weight=\"600\" fill=\"#dcebf3\">ÄR · 2× zuschneiden</text>",
         sleeve_dy-35.0
@@ -519,7 +534,9 @@ pub fn export_with_options(
         svg,
         parts: {
             let mut all: Vec<Piece> = panels.into_iter().map(|p| p.piece).collect();
-            if include_sleeves {all.push(sleeve.piece);}
+            if include_sleeves {
+                all.push(sleeve.piece);
+            }
             all
         },
         pieces_to_cut: count,
