@@ -91,7 +91,11 @@ function parse(values={}){
    k==="seamAllowance"?[0,3]:
    k==="materialDensity"?[3,500]:
    [0,500];
-  v[k]=finite(values[k]??def,k,...limits);
+  v[k]=k==="materialDensity"
+    ? Number(values[k]??def)
+    : finite(values[k]??def,k,...limits);
+  if(k==="materialDensity" && (!Number.isFinite(v[k])||v[k]<3||v[k]>500))
+    throw Error("Flächengewicht muss zwischen 3 und 500 g/m² liegen.");
  }
  if(profile==="child"&&v.headCirc>590)
    throw Error("Kinderprofil: Kopfumfang überprüfen. Größen-/Altersregeln sind noch nicht fachlich validiert.");
@@ -170,13 +174,6 @@ function draft(values={}){
   sourceStatus:v.sourceProfileVerified?"public DOB numerical relations; geometry approximate":"experimental; reference does not specify this profile"};
 }
 const poly=p=>p.map(v=>v.map(fmt).join(",")).join(" ");
-function dim(a,b,offset,label){
- const aa=[a[0]+offset,a[1]],bb=[b[0]+offset,b[1]];
- return '<g stroke="#a2d8e7" stroke-width=".95" fill="none">'+
-  '<path d="M '+poly([a,aa])+'"/>'.replace('d="M ','d="M ').replace(",", " ") + // replaced below by actual dimension extension
-  '<path d="M '+fmt(aa[0])+' '+fmt(aa[1])+' L '+fmt(bb[0])+' '+fmt(bb[1])+'"/>'+
-  '<text x="'+fmt((aa[0]+bb[0])/2+8)+'" y="'+fmt((aa[1]+bb[1])/2)+'" fill="#cfe7f0" stroke="none" font-size="11">'+svgText(label)+'</text></g>';
-}
 function render(values={},allowance=null,density=null){
  const opts={...values};
  if(allowance!=null)opts.seamAllowance=Number(allowance)/10; // browser global mm
