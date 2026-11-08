@@ -44,6 +44,9 @@ test("changing dimensions regenerates hood geometry and 3D model specification",
  }
  const tall=hood.render({hoodHeight:34});
  assert.notEqual(tall.model.heightMm,base.model.heightMm);
+ const changedNeck=hood.render({frontNeck:15});
+ assert.notDeepEqual(gallery.modelFor("hood",changedNeck.model)[1].vertices,
+  gallery.modelFor("hood",base.model)[1].vertices);
  const wide=hood.render({headCirc:61});
  assert.notEqual(wide.model.headCircMm,base.model.headCircMm);
  assert.notDeepEqual(gallery.modelFor("hood",wide.model)[1].vertices,
