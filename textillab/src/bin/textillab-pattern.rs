@@ -3,7 +3,7 @@
 use std::env;
 use std::fs;
 use std::path::Path;
-use textillab::garments::{Garment, Measurements, export_svg};
+use textillab::garments::{export_svg, Garment, Measurements};
 
 fn main() -> Result<(), String> {
     let args: Vec<String> = env::args().skip(1).collect();
