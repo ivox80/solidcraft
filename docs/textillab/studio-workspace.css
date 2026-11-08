@@ -158,3 +158,35 @@ html,body{min-width:320px}
  .measure-grid{gap:7px}
  .statusline .right{display:none}
 }
+
+
+/* TextilLab Hood Atelier – dedicated body profiles, rule/source provenance
+ * and numerically checked neckline joining seams. */
+.hood-only{display:none}
+.hood-mode .hood-only{display:block}
+[hidden]{display:none!important}
+.hood-setup{padding-top:9px;border-top:1px solid #365667}
+.hood-setup>.sectiontitle{color:#8bd7dc}
+.hood-setup .fieldrow{gap:7px}
+.hood-setup .fieldrow select{max-width:153px}
+.hood-setup .section a{color:#8bd7e5;text-decoration:none}
+.hood-setup .section a:hover{text-decoration:underline}
+.hood-setup .hood-verified{display:flex;align-items:flex-start;gap:8px;
+  background:#233c47;border:1px solid #49677a;border-radius:8px;
+  padding:10px 9px;color:#daedf2;font-size:11px;line-height:1.45}
+.hood-verified input{accent-color:#76d1d8}
+.hood-seam-report{margin:10px 0 5px;display:grid;gap:7px}
+.hood-check{border-radius:8px;padding:10px;background:#233e49;
+  border:1px solid #4a7282;line-height:1.6;color:#e8f3f6}
+.hood-check strong{font-size:11px;display:block}
+.hood-check span{font-size:10px;color:#aec7d3}
+.hood-check.pass{border-left:3px solid #8ed4bd}
+.hood-check.fail{border-left:3px solid #ee9a88}
+.hood-seam{display:flex;flex-direction:column;padding:8px 10px;
+  border:1px solid #3d5a6a;background:#162c3b;border-radius:7px;gap:3px}
+.hood-seam strong{font-weight:600;font-size:11px}
+.hood-seam span{color:#b7cedb;font-size:10px;font-variant-numeric:tabular-nums}
+.hood-seam.ok{border-left:2px solid #76d6cf}
+.hood-seam.bad{border-left:2px solid #fc8f78}
+.hood-mode #preview svg g[data-piece-id="KH"]{cursor:pointer}
+.hood-mode #preview svg g[data-piece-id="KH"]:hover>path:first-child{filter:drop-shadow(0 0 4px #94e7eb)}
