@@ -659,7 +659,7 @@ pub fn export_svg(
         row_height = row_height.max(h + 28.0);
         max_width = max_width.max(x);
     }
-    let width = max_width.max(600.0).min(1550.0);
+    let width = max_width.clamp(600.0, 1550.0);
     let height = y + row_height + 35.0;
     let qty = parts.iter().map(|part| part.copies).sum();
     let mass = cut * density_g_m2 / 1_000_000.0;
