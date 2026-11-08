@@ -92,7 +92,9 @@
     const ks=kneeW/2, hs=hemW/2;
     const centerW=point(-waistHalf,back?-26:0),sideW=point(waistHalf,back?5:8);
     const sideHip=point(hipHalf,hipY),centerHip=point(-hipHalf,hipY);
-    const sideRise=point(hipHalf+(back?15:12),rise),innerRise=point(-hipHalf-ext,rise);
+    const innerRise=point(-hipHalf-ext,rise);
+    const intendedThighWidth=m.thigh/2+(back?10:-10);
+    const sideRise=point((hipHalf+(back?15:12))*.65 + (innerRise[0]+intendedThighWidth)*.35,rise);
     const sideKnee=point(ks,kneeY),innerKnee=point(-ks,kneeY);
     const sideHem=point(hs,hemY),innerHem=point(-hs,hemY);
     const poly=new Shape().start(centerW).line(sideW);
