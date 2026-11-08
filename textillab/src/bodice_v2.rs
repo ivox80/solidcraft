@@ -467,7 +467,9 @@ pub fn export_with_options(
         cut += 2.0 * area(&offset(&sleeve.piece.outline, seam_mm)?).abs();
     }
     let mass = cut * density_g_m2 / 1_000_000.0;
-    let mut svg=format!(
+    let count = if include_sleeves { 4 } else { 2 };
+    let sleeves_count = if include_sleeves { 2 } else { 0 };
+    let mut svg = format!(
         "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{width:.3}mm\" height=\"{height:.3}mm\" viewBox=\"0 0 {width:.3} {height:.3}\" data-bodice-version=\"2\" data-pieces=\"{count}\" data-sleeves=\"{sleeves_count}\" data-sewn-area=\"{sewn:.3}\" data-cut-area=\"{cut:.3}\" data-mass=\"{mass:.3}\">\n"
     );
     svg.push_str("<rect width=\"100%\" height=\"100%\" fill=\"#14202e\"/>\n");
@@ -500,11 +502,13 @@ pub fn export_with_options(
         svg,
         "<text x=\"{front_dx:.3}\" y=\"51\" font-size=\"12\" fill=\"#9bafc1\">Türkis: Nahtlinie · Orange: Zuschnitt · FDL / Abnäher / Referenzlinien</text>"
     );
+    if include_sleeves {
     let _ = writeln!(
         svg,
         "<text x=\"{sleeve_dx:.3}\" y=\"{:.3}\" font-size=\"14\" font-weight=\"600\" fill=\"#dcebf3\">ÄR · 2× zuschneiden</text>",
         sleeve_dy-35.0
     );
+    }
     let _ = writeln!(
         svg,
         "<text x=\"{front_dx:.3}\" y=\"{:.3}\" font-size=\"11\" fill=\"#9bafc1\">KONZEPT-GRUNDSCHNITT · Armkugellänge und Abnäher vor Fertigung prüfen</text>",
