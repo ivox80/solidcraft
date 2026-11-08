@@ -114,16 +114,16 @@ fn cubic(a:Point,b:Point,c:Point,d:Point)->Vec<Point>{
 }
 fn neck_curve(start:Point,target:f64,rise:f64,dy:f64)->Result<Vec<Point>,String>{
     let make=|span:f64|cubic(start,
-        p(start.x+.28*span,start.y-rise),
-        p(start.x+.73*span,start.y-rise),
+        p(start.x+0.28*span,start.y-rise),
+        p(start.x+0.73*span,start.y-rise),
         p(start.x+span,start.y+dy));
     let (mut low,mut high)=(1.0,target);
     for _ in 0..56 {
-        let mid=(low+high)*.5;
+        let mid=(low+high)*0.5;
         if len(&make(mid))>target {high=mid;} else {low=mid;}
     }
-    let pts=make((low+high)*.5);
-    if (len(&pts)-target).abs()>.05 {return Err("Hood neckline curve cannot be matched".into())}
+    let pts=make((low+high)*0.5);
+    if (len(&pts)-target).abs()>0.05 {return Err("Hood neckline curve cannot be matched".into())}
     Ok(pts)
 }
 #[derive(Clone, Debug)]
@@ -140,8 +140,8 @@ fn check_pair(id:&'static str,a:f64,b:f64,mode:SewingMode,
     let delta=a-b;
     let expected=if mode==SewingMode::Ease{ease}else{0.0};
     let matched=match mode {
-        SewingMode::Match=>(delta).abs()<=.25,
-        SewingMode::Ease=>a>=b && (delta-ease).abs()<=.25,
+        SewingMode::Match=>(delta).abs()<=0.25,
+        SewingMode::Ease=>a>=b && (delta-ease).abs()<=0.25,
         SewingMode::Stretch=>a<b && (b/a-1.0)*100.0<=stretch_pct+1e-8,
     };
     SewingLine{id,hood_mm:a,garment_mm:b,delta_mm:delta,
@@ -162,7 +162,7 @@ fn validate(m:Measurements,o:Options)->Result<(f64,f64),String>{
        !(50.0..=240.0).contains(&m.front_neck_half_mm) ||
        !(240.0..=480.0).contains(&h) ||
        !(190.0..=460.0).contains(&depth) ||
-       h<m.head_mm*.44 || depth<m.head_mm*.36 ||
+       h<m.head_mm*0.44 || depth<m.head_mm*0.36 ||
        m.back_neck_half_mm+m.front_neck_half_mm>depth*1.22 {
         return Err("Incompatible head, height, depth and neckline measures".into());
     }
@@ -217,29 +217,29 @@ pub fn draft(m:Measurements,o:Options)->Result<HoodDraft,String>{
     let factor=if o.mode==SewingMode::Stretch {
         1.0/(1.0+o.material_stretch_pct/100.0)
     }else{1.0};
-    let back_target=(m.back_neck_half_mm+added*.5)*factor;
-    let front_target=(m.front_neck_half_mm+added*.5)*factor;
+    let back_target=(m.back_neck_half_mm+added*0.5)*factor;
+    let front_target=(m.front_neck_half_mm+added*0.5)*factor;
     let a=p(0.0,h);
     let back=neck_curve(a,back_target,14.0,-5.0)?;
     let shoulder=*back.last().expect("curve end");
     let front=neck_curve(shoulder,front_target,12.0,-12.0)?;
     let face_point=*front.last().expect("curve end");
-    let apex=p(depth*.54,0.0);
+    let apex=p(depth*0.54,0.0);
     let back_top=join(
-        &cubic(a,p(-17.0,h*.61),p(-8.0,h*.10),p(depth*.25,8.0)),
-        &cubic(p(depth*.25,8.0),p(depth*.34,-5.0),p(depth*.47,-2.0),apex)
+        &cubic(a,p(-17.0,h*0.61),p(-8.0,h*0.10),p(depth*0.25,8.0)),
+        &cubic(p(depth*0.25,8.0),p(depth*0.34,-5.0),p(depth*0.47,-2.0),apex)
     );
     let face=join(
-        &cubic(apex,p(depth*.84,-2.0),p(depth*1.03,h*.14),p(depth*.98,h*.34)),
-        &cubic(p(depth*.98,h*.34),p(depth*1.05,h*.59),p(depth*.92,h*.75),face_point)
+        &cubic(apex,p(depth*0.84,-2.0),p(depth*1.03,h*0.14),p(depth*0.98,h*0.34)),
+        &cubic(p(depth*0.98,h*0.34),p(depth*1.05,h*0.59),p(depth*0.92,h*0.75),face_point)
     );
     let mut outline=join(&join(&join(&back_top,&face),&reversed(&front)),&reversed(&back));
     outline.pop();
     let center=len(&back_top);
     let seams=vec![
         check_pair("center-pair",center,center,SewingMode::Match,0.0,0.0),
-        check_pair("back-neck",len(&back),m.back_neck_half_mm,o.mode,added*.5,o.material_stretch_pct),
-        check_pair("front-neck",len(&front),m.front_neck_half_mm,o.mode,added*.5,o.material_stretch_pct)
+        check_pair("back-neck",len(&back),m.back_neck_half_mm,o.mode,added*0.5,o.material_stretch_pct),
+        check_pair("front-neck",len(&front),m.front_neck_half_mm,o.mode,added*0.5,o.material_stretch_pct)
     ];
     if !seams.iter().all(|s|s.matched){return Err("Hood sewing-line contracts failed".into());}
     Ok(HoodDraft{outline,back_curve:back,front_curve:front,center_curve:back_top,
@@ -330,8 +330,8 @@ mod tests {
             let result=draft(m,o).unwrap();
             assert_eq!(result.seams.len(),3);
             assert!(result.seams.iter().all(|x|x.matched));
-            assert!((result.seams[1].hood_mm-m.back_neck_half_mm).abs()<.05);
-            assert!((result.seams[2].hood_mm-m.front_neck_half_mm).abs()<.05);
+            assert!((result.seams[1].hood_mm-m.back_neck_half_mm).abs()<0.05);
+            assert!((result.seams[2].hood_mm-m.front_neck_half_mm).abs()<0.05);
             assert!(!result.validated_for_production);
             let svg=export(m,o).unwrap();
             assert_eq!(svg.pieces_to_cut,2);
@@ -344,7 +344,7 @@ mod tests {
         let m=Measurements::for_profile(Profile::Women);
         let easing=Options{mode:SewingMode::Ease,planned_ease_mm:6.0,..Options::default()};
         let result=draft(m,easing).unwrap();
-        assert!((result.seams[1].delta_mm-3.0).abs()<.05);
+        assert!((result.seams[1].delta_mm-3.0).abs()<0.05);
         let stretch=Options{mode:SewingMode::Stretch,material_stretch_pct:4.0,
             material_stretch_verified:true,..Options::default()};
         assert!(draft(m,stretch).unwrap().seams.iter().all(|s|s.matched));
