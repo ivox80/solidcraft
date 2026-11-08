@@ -108,6 +108,29 @@ function createSphere(name,color,center,radii,segments=26,latitudes=14){
      [rings[j][k+1],rings[j+1][k],rings[j+1][k+1]]);
  return m;
 }
+function taperedLimb(name,color,a,b,radiusA,radiusB,onlyFull=false){
+ const m={name,color,body:true,fullBodyOnly:onlyFull,vertices:[],faces:[],edgeGroups:[]};
+ const axis=diff(b,a),l=Math.hypot(...axis),uy=axis.map(x=>x/l);
+ const side=Math.abs(uy[1])<.9?[0,1,0]:[1,0,0];
+ const cross=(x,y)=>[x[1]*y[2]-x[2]*y[1],x[2]*y[0]-x[0]*y[2],x[0]*y[1]-x[1]*y[0]];
+ const aa=cross(uy,side),alen=Math.hypot(...aa),u=aa.map(x=>x/alen),
+  vv=cross(uy,u),slices=14,rings=5;
+ const rows=[];
+ for(let j=0;j<=rings;j++){
+  const t=j/rings,r=(radiusA*(1-t)+radiusB*t)*(1+.06*Math.sin(PI*t)),row=[];
+  for(let k=0;k<=slices;k++){
+   const angle=2*PI*k/slices,p=P(...[0,1,2].map(i=>
+    a[i]+t*(b[i]-a[i])+r*(u[i]*Math.cos(angle)+vv[i]*Math.sin(angle))));
+   row.push(m.vertices.push(p)-1);
+  }
+  rows.push(row);
+ }
+ for(let j=0;j<rings;j++)for(let k=0;k<slices;k++){
+  m.faces.push([rows[j][k],rows[j+1][k],rows[j][k+1]]);
+  m.faces.push([rows[j][k+1],rows[j+1][k],rows[j+1][k+1]]);
+ }
+ return m;
+}
 function bodyMeshes(body,shape){
  const r=body.headCircMm/(2*PI);
  const h=shape.heightMm,depth=shape.depthMm;
@@ -123,7 +146,39 @@ function bodyMeshes(body,shape){
   P(shoulderWidth,105,body.chestMm/(2*PI)*.70),32,16);
  const waist=createSphere("Taille / Hüfte","#9d938a",P(0,-300,-12),
   P(body.waistMm/(2*PI)*1.05,150,body.hipMm/(2*PI)*.60),24,12);
- return {meshes:[head,neck,torso,waist],head:{center:headCenter,radii:headRadii}};
+ const models=[head,neck,torso];
+ const scale=body.heightMm/1680;
+ const sw=shoulderWidth*.87;
+ for(const side of [-1,1]){
+  const A=P(side*sw,-112,-4);
+  const E=P(side*(sw*1.04),-335*scale,-16);
+  const W=P(side*(sw*1.11),-535*scale,4);
+  models.push(taperedLimb("Oberarm "+side,"#ada197",A,E,
+    body.chestMm*.055,body.chestMm*.044,true));
+  models.push(taperedLimb("Unterarm "+side,"#b7a69a",E,W,
+    body.chestMm*.044,body.chestMm*.024,true));
+  models.push(createSphere("Hand "+side,"#b5a497",
+    P(W[0],W[1]-46*scale,W[2]),P(27*scale,50*scale,16*scale),14,9));
+  models.at(-1).fullBodyOnly=true;
+ }
+ waist.fullBodyOnly=true;
+ models.push(waist);
+ const hips=body.hipMm/(2*PI)*.46;
+ const legStart=-360*scale,kneeY=-815*scale,ankleY=-1370*scale;
+ for(const side of [-1,1]){
+  const a=P(side*hips,legStart,-10);
+  const knee=P(side*hips*1.01,kneeY,4);
+  const foot=P(side*hips*.99,ankleY,22);
+  models.push(taperedLimb("Oberschenkel "+side,"#a99a90",a,knee,
+    body.hipMm*.079,body.hipMm*.052,true));
+  models.push(taperedLimb("Unterschenkel "+side,"#a69b91",knee,foot,
+    body.hipMm*.049,body.hipMm*.030,true));
+  const shoe=createSphere("Fuß "+side,"#978f85",
+    P(foot[0],foot[1]-22*scale,foot[2]+45*scale),
+    P(37*scale,27*scale,90*scale),15,9);
+  shoe.fullBodyOnly=true;models.push(shoe);
+ }
+ return {meshes:models,head:{center:headCenter,radii:headRadii}};
 }
 function construct(hood,bodyData={},fabricData={}){
  if(!hood?.parts?.[0]?.edges)throw Error("2D-Kapuzenkanten fehlen: 3D-Fertignähte werden nicht erfunden.");
@@ -272,7 +327,8 @@ function construct(hood,bodyData={},fabricData={}){
   triangles:faceCount,vertexCount:mesh.vertices.length,
   springCount:springs.length,collisionCorrections:contacts,
   rmsEdgeStrainPct:rms*100,maxEdgeStrainPct:max*100,
-  approximation:true,validForProduction:false
+  approximation:true,validForProduction:false,
+  fitRisk:max>.25?"HIGH_STRAIN":"UNVALIDATED"
  };
  mesh.drapeMetrics=metrics;
  return {meshes:[...body.meshes,mesh],mannequin:parameters,material,metrics,
