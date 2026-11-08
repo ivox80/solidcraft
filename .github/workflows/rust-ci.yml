@@ -46,6 +46,8 @@ jobs:
           node --check ../docs/textillab/pattern-library.js
           node --check ../docs/textillab/bodice-v2.js
           node --check ../docs/textillab/drafting-system.js
+          node --check ../docs/textillab/seam-contracts.js
+          node --test ../docs/textillab/hood-seam-hardening.test.js
           node --check ../docs/textillab/hood-system.js
           node --check ../docs/textillab/garment-3d.js
           node --test ../docs/textillab/hood-and-3d.test.js
@@ -75,6 +77,19 @@ jobs:
           grep -q 'data-pants-system="textillab.pants.experimental.1"' smoke-exports/pants-rules-v11.svg
           grep -q 'HH' smoke-exports/pants-rules-v11.svg
           grep -q 'FDL' smoke-exports/pants-rules-v11.svg
+      - name: Rust hood construction and strict seam checks
+        run: |
+          cargo run --release --bin textillab-pattern -- hood --profile women backNeck=10 frontNeck=12 --out smoke-exports/hood-rust-women.svg
+          cargo run --release --bin textillab-pattern -- hood --profile men --style relaxed --out smoke-exports/hood-rust-men.svg
+          cargo run --release --bin textillab-pattern -- hood --profile child ageYears=8 --out smoke-exports/hood-rust-child.svg
+      - name: Verify hood source and unvalidated build markers
+        shell: bash
+        run: |
+          test -s smoke-exports/hood-rust-women.svg
+          test -s smoke-exports/hood-rust-men.svg
+          test -s smoke-exports/hood-rust-child.svg
+          grep -q 'data-hood-system="textillab.hood.prototype.1"' smoke-exports/hood-rust-women.svg
+          grep -q 'data-production-approved="false"' smoke-exports/hood-rust-child.svg
       - name: Clothing blocks smoke test
         run: |
           cargo run --release --bin textillab-pattern -- top chest=112 waist=92 --allowance 10 --out smoke-exports/top-block.svg
