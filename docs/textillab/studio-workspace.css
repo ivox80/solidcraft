@@ -221,3 +221,22 @@ html,body{min-width:320px}
   color:#d9edf4;font-size:11px;line-height:1.5}
 .hood-verified input{accent-color:#75d6dc}
 .hood-mode .hood-rule-details .rule-line{font-size:11px}
+
+
+/* HoodLab v1.4 – parametric mannequin and cloth PBD diagnostics */
+.hood-fit-panel{background:linear-gradient(140deg,#162e3d,#152634);border:1px solid #315267;border-radius:11px}
+.hood-fit-panel details{margin:6px 0 14px}
+.hood-fabric-sliders{display:grid;gap:9px;margin:12px 0}
+.hood-fabric-sliders label{display:grid;gap:4px;font-size:11px;color:#c6dce6}
+.hood-fabric-sliders output{float:right;color:#a8e6e5;font-variant-numeric:tabular-nums}
+.hood-fabric-sliders input[type="range"]{width:100%;height:20px;accent-color:#79dce0;cursor:ew-resize}
+.hood-fabric-sliders input[type="number"]{width:100%;max-width:130px;padding:8px;color:#e4eef7;background:#0f2430;border:1px solid #38576b;border-radius:6px}
+.hood-drape-report{display:grid;gap:9px;background:#0e2632;border:1px solid #3d5b6e;border-radius:9px;padding:11px;margin:10px 0}
+.hood-drape-status{padding:8px 10px;border-radius:7px;background:#284a4d;border-left:3px solid #89d8c3;color:#ebf8f7;font-size:12px;font-weight:650}
+.hood-drape-status.warning{border-left-color:#f8ab86;background:#573b32;color:#ffe0d3}
+.hood-drape-metrics{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.hood-drape-metrics>div{background:#1c3443;border:1px solid #395366;border-radius:7px;padding:7px;display:grid;gap:2px}
+.hood-drape-metrics span{font-size:10px;color:#a9c1cd}
+.hood-drape-metrics strong{font-size:12px;font-variant-numeric:tabular-nums;color:#e3f7fa}
+.hood-fit-panel .hint{line-height:1.55}
+@media(max-width:600px){.hood-drape-metrics{grid-template-columns:1fr}}
