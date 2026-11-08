@@ -29,14 +29,14 @@ impl Shape {
     fn start(x: f64, y: f64) -> Self {
         Self {
             outline: vec![Point::new(x, y)],
-            path: format!("M {x:.3} {y:.3}"),
+            path: format!("M {x:0.3} {y:0.3}"),
             current: Point::new(x, y),
         }
     }
     fn line(&mut self, point: Point) {
         if (self.current.x-point.x).hypot(self.current.y-point.y)>1e-8 {
             self.outline.push(point);
-            let _ = write!(self.path, " L {:.3} {:.3}", point.x, point.y);
+            let _ = write!(self.path, " L {:0.3} {:0.3}", point.x, point.y);
         }
         self.current = point;
     }
@@ -50,7 +50,7 @@ impl Shape {
                 u*u*u*a.y+3.0*u*u*t*b.y+3.0*u*t*t*c.y+t*t*t*d.y,
             ));
         }
-        let _=write!(self.path," C {:.3} {:.3} {:.3} {:.3} {:.3} {:.3}",b.x,b.y,c.x,c.y,d.x,d.y);
+        let _=write!(self.path," C {:0.3} {:0.3} {:0.3} {:0.3} {:0.3} {:0.3}",b.x,b.y,c.x,c.y,d.x,d.y);
         self.current=d;
     }
     fn close(&mut self) {
@@ -75,13 +75,13 @@ fn draft_panel(m: Measurements, front: bool) -> BodicePanel {
     let slope=m.shoulder_slope_mm;
     let mut shape=Shape::start(0.0,top_y+neck_d);
     shape.cubic(
-        Point::new(neck_w*.28,top_y+neck_d),
-        Point::new(neck_w*.66,top_y+neck_d*.03),
+        Point::new(neck_w*0.28,top_y+neck_d),
+        Point::new(neck_w*0.66,top_y+neck_d*0.03),
         Point::new(neck_w,top_y),24
     );
     shape.line(Point::new(shoulder_x,top_y+slope));
     shape.cubic(
-        Point::new(shoulder_x+8.0,top_y+slope+arm_y*.12),
+        Point::new(shoulder_x+8.0,top_y+slope+arm_y*0.12),
         Point::new(chest_w-47.0,arm_y-12.0),
         Point::new(chest_w,arm_y),30
     );
@@ -107,18 +107,18 @@ fn draft_panel(m: Measurements, front: bool) -> BodicePanel {
     );
     shape.line(Point::new(0.0,hem_y));
     shape.close();
-    let bust_x=(chest_w*.53).min(m.bust_span_mm/2.0);
+    let bust_x=(chest_w*0.53).min(m.bust_span_mm/2.0);
     let bust_point=Point::new(bust_x,bust_y);
-    let dart_x=if front {bust_x}else{(chest_w*.54).min(m.bust_span_mm*.56)};
-    let down=(hip_y-waist_y)*.8;
+    let dart_x=if front {bust_x}else{(chest_w*0.54).min(m.bust_span_mm*0.56)};
+    let down=(hip_y-waist_y)*0.8;
     let lower_dart= [
         Point::new(dart_x,waist_y-if front {145.0}else{165.0}),
         Point::new(dart_x+waist_dart_w/2.0,waist_y),
         Point::new(dart_x,waist_y+down.min(170.0)),
         Point::new(dart_x-waist_dart_w/2.0,waist_y),
     ];
-    let shoulder_dart_x=neck_w+(shoulder_x-neck_w)*if front {.51}else{.57};
-    let shoulder_dart_w=if front {(m.chest_mm*.033).max(19.0)}else{(m.chest_mm*.014).max(10.0)};
+    let shoulder_dart_x=neck_w+(shoulder_x-neck_w)*if front {0.51}else{0.57};
+    let shoulder_dart_w=if front {(m.chest_mm*0.033).max(19.0)}else{(m.chest_mm*0.014).max(10.0)};
     let a=shoulder_dart_x-shoulder_dart_w/2.0;
     let b=shoulder_dart_x+shoulder_dart_w/2.0;
     let shoulder_y=|x:f64| top_y+(x-neck_w)/(shoulder_x-neck_w)*slope;
@@ -139,14 +139,14 @@ fn draft_panel(m: Measurements, front: bool) -> BodicePanel {
                                else {Point::new(shoulder_dart_x-15.0,top_y+165.0)},
         bust_point,
         waist_y,bust_y,hip_y,hem_y,
-        grain_x:chest_w*.62,
+        grain_x:chest_w*0.62,
     }
 }
 
 /// Drafts a front and back block with their own center-fold and dart marks.
 pub fn draft(m: Measurements) -> Result<Vec<BodicePanel>, String> {
     m.validate()?;
-    if m.neck_mm>m.shoulder_mm*1.25 || m.bust_span_mm>=m.chest_mm*.75 {
+    if m.neck_mm>m.shoulder_mm*1.25 || m.bust_span_mm>=m.chest_mm*0.75 {
         return Err("Invalid neck, shoulder or bust-point relationship".into());
     }
     Ok(vec![draft_panel(m,true),draft_panel(m,false)])
@@ -157,33 +157,33 @@ fn render_panel(panel:&BodicePanel,offset:f64,mirrored:bool,seam_mm:f64) -> Resu
     let cx=if mirrored {panel.piece.outline.iter().map(|p|p.x).fold(f64::NEG_INFINITY,f64::max)}else{0.0};
     let tx=if mirrored {offset+cx}else{offset};
     let flip=if mirrored {" scale(-1 1)"}else{""};
-    let _=writeln!(s,"<g transform=\"translate({tx:.3} 0){flip}\">");
-    let _=writeln!(s,"<path d=\"{}\" fill=\"#cb6953\" fill-opacity=\".04\" stroke=\"#a85145\" stroke-width=\"1.8\" stroke-linejoin=\"round\"/>",panel.svg_path);
+    let _=writeln!(s,"<g transform=\"translate({tx:0.3} 0){flip}\">");
+    let _=writeln!(s,"<path d=\"{}\" fill=\"#cb6953\" fill-opacity=\"0.04\" stroke=\"#a85145\" stroke-width=\"1.8\" stroke-linejoin=\"round\"/>",panel.svg_path);
     if seam_mm>0.0 {
         let cut=offset(&panel.piece.outline,seam_mm)?;
-        let _=writeln!(s,"<polygon fill=\"none\" stroke=\"#e5a16c\" stroke-width=\".85\" stroke-dasharray=\"5 3\" points=\"{}\"/>",svg_points(&cut));
+        let _=writeln!(s,"<polygon fill=\"none\" stroke=\"#e5a16c\" stroke-width=\"0.85\" stroke-dasharray=\"5 3\" points=\"{}\"/>",svg_points(&cut));
     }
     let _=writeln!(s,"<polygon fill=\"none\" stroke=\"#b9594d\" stroke-width=\"1.3\" points=\"{}\"/>",svg_points(&panel.waist_dart));
     for leg in &panel.shoulder_dart_legs {
         let end=panel.shoulder_dart_apex;
-        let _=writeln!(s,"<path d=\"M {:.3} {:.3} L {:.3} {:.3}\" fill=\"none\" stroke=\"#b9594d\" stroke-width=\"1.4\"/>",
+        let _=writeln!(s,"<path d=\"M {:0.3} {:0.3} L {:0.3} {:0.3}\" fill=\"none\" stroke=\"#b9594d\" stroke-width=\"1.4\"/>",
             leg.x,leg.y,end.x,end.y);
     }
     let top=panel.bust_y+60.0;
     let bottom=panel.hem_y-65.0;
     let x=panel.grain_x;
-    let _=writeln!(s,"<path d=\"M {x:.3} {top:.3} V {bottom:.3}\" fill=\"none\" stroke=\"#4d8c9d\" stroke-width=\"1.5\"/>");
-    let _=writeln!(s,"<path d=\"M {:.3} {:.3} L {x:.3} {bottom:.3} L {:.3} {:.3}\" fill=\"none\" stroke=\"#4d8c9d\" stroke-width=\"2\"/>",
+    let _=writeln!(s,"<path d=\"M {x:0.3} {top:0.3} V {bottom:0.3}\" fill=\"none\" stroke=\"#4d8c9d\" stroke-width=\"1.5\"/>");
+    let _=writeln!(s,"<path d=\"M {:0.3} {:0.3} L {x:0.3} {bottom:0.3} L {:0.3} {:0.3}\" fill=\"none\" stroke=\"#4d8c9d\" stroke-width=\"2\"/>",
         x-6.0,bottom-13.0,x+6.0,bottom-13.0);
     let b=panel.bust_point;
-    let _=writeln!(s,"<circle cx=\"{:.3}\" cy=\"{:.3}\" r=\"2.6\" fill=\"#8d4037\"/>",b.x,b.y);
+    let _=writeln!(s,"<circle cx=\"{:0.3}\" cy=\"{:0.3}\" r=\"2.6\" fill=\"#8d4037\"/>",b.x,b.y);
     s.push_str("</g>\n");
-    let label_x=if mirrored {offset+cx*.5}else{offset+110.0};
+    let label_x=if mirrored {offset+cx*0.5}else{offset+110.0};
     let label=if mirrored {"RT"}else{"VT"};
-    let _=writeln!(s,"<text x=\"{label_x:.3}\" y=\"{:.3}\" text-anchor=\"middle\" font-size=\"24\" fill=\"#304a53\" font-weight=\"700\">{label}</text>",panel.hem_y-35.0);
+    let _=writeln!(s,"<text x=\"{label_x:0.3}\" y=\"{:0.3}\" text-anchor=\"middle\" font-size=\"24\" fill=\"#304a53\" font-weight=\"700\">{label}</text>",panel.hem_y-35.0);
     let label_x=label_x+34.0;
     let label_y=panel.waist_y+120.0;
-    let _=writeln!(s,"<text x=\"{label_x:.3}\" y=\"{label_y:.3}\" font-size=\"13\" fill=\"#4d8c9d\" transform=\"rotate(-90 {label_x:.3} {label_y:.3})\">FDL</text>");
+    let _=writeln!(s,"<text x=\"{label_x:0.3}\" y=\"{label_y:0.3}\" font-size=\"13\" fill=\"#4d8c9d\" transform=\"rotate(-90 {label_x:0.3} {label_y:0.3})\">FDL</text>");
     Ok(s)
 }
 
@@ -206,15 +206,15 @@ pub fn export(m:Measurements,seam_mm:f64,density_g_m2:f64)->Result<GarmentExport
     }
     let mass=cut*density_g_m2/1_000_000.0;
     let mut svg=format!(
-        "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{width:.3}mm\" height=\"{height:.3}mm\" viewBox=\"0 0 {width:.3} {height:.3}\" data-bodice-version=\"2\" data-pieces=\"2\" data-sewn-area=\"{sewn:.3}\" data-cut-area=\"{cut:.3}\" data-mass=\"{mass:.3}\">\n"
+        "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{width:0.3}mm\" height=\"{height:0.3}mm\" viewBox=\"0 0 {width:0.3} {height:0.3}\" data-bodice-version=\"2\" data-pieces=\"2\" data-sewn-area=\"{sewn:0.3}\" data-cut-area=\"{cut:0.3}\" data-mass=\"{mass:0.3}\">\n"
     );
     svg.push_str("<rect width=\"100%\" height=\"100%\" fill=\"#d9c4a5\"/>\n");
     for (label,y) in [
         ("Brust",panels[0].bust_y),("Taille",panels[0].waist_y),
         ("Hüfte",panels[0].hip_y),("Saum",panels[0].hem_y),
     ] {
-        let _=writeln!(svg,"<path d=\"M 20 {y:.3} H {:.3}\" stroke=\"#776b5c\" stroke-width=\".65\" opacity=\".48\"/>",width-70.0);
-        let _=writeln!(svg,"<text x=\"{:.3}\" y=\"{:.3}\" font-size=\"13\" fill=\"#52616c\">{label}</text>",width-60.0,y-5.0);
+        let _=writeln!(svg,"<path d=\"M 20 {y:0.3} H {:0.3}\" stroke=\"#776b5c\" stroke-width=\"0.65\" opacity=\"0.48\"/>",width-70.0);
+        let _=writeln!(svg,"<text x=\"{:0.3}\" y=\"{:0.3}\" font-size=\"13\" fill=\"#52616c\">{label}</text>",width-60.0,y-5.0);
     }
     svg.push_str(&render_panel(&panels[0],75.0,false,seam_mm)?);
     svg.push_str(&render_panel(&panels[1],515.0,true,seam_mm)?);
