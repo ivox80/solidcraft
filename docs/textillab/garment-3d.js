@@ -245,6 +245,7 @@ function createRenderer(canvas){
   e.preventDefault();state.zoom=clamp(state.zoom*(e.deltaY<0?1.11:.9),.4,3);redraw();
  },{passive:false});
  return {setModel(type,data){state.model={type,data};state.meshes=modelFor(type,data);redraw()},
+  clear(){state.model=null;state.meshes=[];redraw()},
   setOptions(options){if("wire"in options)state.wire=!!options.wire;
    if("body"in options)state.body=!!options.body;redraw()},
   reset(){state.yaw=-.55;state.pitch=-.18;state.zoom=1;redraw()},
