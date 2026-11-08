@@ -1,0 +1,341 @@
+"use strict";
+
+// UI and 3D interaction live in JavaScript. Unfolding and seam allowances
+// remain exclusively in the Rust core (POST /api/unfold).
+const $ = (id) => document.getElementById(id);
+const canvas = $("modelCanvas");
+const ctx = canvas.getContext("2d");
+const state = {
+  source: "", name: "", vertices: [], faces: [], edges: [],
+  seams: new Set(), selectedFace: -1, hoveredEdge: null,
+  yaw: -0.48, pitch: 0.42, zoom: 1.0, projected: [],
+  pointer: null, currentSvg: "", pending: null, revision: 0,
+};
+
+function setStatus(message, bad = false) {
+  $("status").textContent = message;
+  document.querySelector(".statusdot").style.background = bad ? "#f58c86" : "#4ac7b0";
+}
+function clearStats() {
+  ["pieces", "sewnArea", "cutArea", "mass"].forEach((id) => $(id).textContent = "–");
+  $("exportBtn").disabled = true;
+}
+function parseObj(source) {
+  const vertices = [], faces = [];
+  const lines = source.split(/\r?\n/);
+  for (let lineNo = 0; lineNo < lines.length; lineNo++) {
+    const words = lines[lineNo].split("#")[0].trim().split(/\s+/);
+    if (words[0] === "v") {
+      const p = words.slice(1, 4).map(Number);
+      if (p.length < 3 || !p.every(Number.isFinite))
+        throw new Error("Ungültige Koordinate in Zeile " + (lineNo + 1));
+      vertices.push(p);
+    } else if (words[0] === "f") {
+      if (words.length < 4 || words.length > 5)
+        throw new Error("Nur Dreiecke und Vierecke unterstützt (Zeile " + (lineNo + 1) + ")");
+      const f = words.slice(1).map((token) => {
+        const raw = Number(token.split("/")[0]);
+        const i = raw > 0 ? raw - 1 : vertices.length + raw;
+        if (!Number.isInteger(raw) || raw === 0 || i < 0 || i >= vertices.length)
+          throw new Error("Ungültiger Vertexindex in Zeile " + (lineNo + 1));
+        return i;
+      });
+      faces.push([f[0], f[1], f[2]]);
+      if (f.length === 4) faces.push([f[0], f[2], f[3]]);
+    }
+  }
+  if (!faces.length) throw new Error("OBJ enthält keine Dreiecksflächen");
+  if (faces.length > 10000) throw new Error("Maximal 10.000 Dreiecke in der Studio-Vorschau");
+  const edges = new Map();
+  faces.forEach((face, fi) => {
+    for (let i = 0; i < 3; i++) {
+      const a = Math.min(face[i], face[(i + 1) % 3]);
+      const b = Math.max(face[i], face[(i + 1) % 3]);
+      const key = a + ":" + b;
+      if (!edges.has(key)) edges.set(key, { a, b, faces: [] });
+      edges.get(key).faces.push(fi);
+    }
+  });
+  return { vertices, faces, edges: [...edges.values()].sort((x, y) => x.a - y.a || x.b - y.b) };
+}
+function seamKey(edge) {
+  return (edge.a + 1) + ":" + (edge.b + 1);
+}
+async function loadModel(source, name) {
+  const parsed = parseObj(source);
+  state.source = source;
+  state.name = name;
+  Object.assign(state, parsed);
+  state.seams.clear();
+  state.selectedFace = -1;
+  state.hoveredEdge = null;
+  resetCamera();
+  $("fileName").textContent = name;
+  $("meshStats").textContent = state.vertices.length + " Punkte · " + state.faces.length + " Dreiecke";
+  updateSeamList();
+  await updatePreview();
+}
+function resetCamera() {
+  state.yaw = -0.48;
+  state.pitch = 0.42;
+  state.zoom = 1;
+  draw();
+}
+function cameraPoints() {
+  if (!state.vertices.length) return [];
+  const center = [0, 0, 0];
+  for (const p of state.vertices) for (let i = 0; i < 3; i++) center[i] += p[i];
+  for (let i = 0; i < 3; i++) center[i] /= state.vertices.length;
+  const cy = Math.cos(state.yaw), sy = Math.sin(state.yaw);
+  const cp = Math.cos(state.pitch), sp = Math.sin(state.pitch);
+  return state.vertices.map(([px, py, pz]) => {
+    const x = px - center[0], y = py - center[1], z = pz - center[2];
+    const rx = cy * x - sy * y;
+    const ry = sy * x + cy * y;
+    return [rx, -cp * ry + sp * z, sp * ry + cp * z];
+  });
+}
+function projectVertices(w, h) {
+  const p = cameraPoints();
+  if (!p.length) return [];
+  const minx = Math.min(...p.map(v => v[0]));
+  const maxx = Math.max(...p.map(v => v[0]));
+  const miny = Math.min(...p.map(v => v[1]));
+  const maxy = Math.max(...p.map(v => v[1]));
+  const spanx = Math.max(1, maxx - minx);
+  const spany = Math.max(1, maxy - miny);
+  const scale = Math.min(w / (spanx * 1.5), h / (spany * 1.5)) * state.zoom;
+  const cx = (minx + maxx) / 2, cy = (miny + maxy) / 2;
+  return p.map(([x, y, z]) => ({ x: w / 2 + (x - cx) * scale, y: h / 2 + (y - cy) * scale, z }));
+}
+function draw() {
+  const box = canvas.getBoundingClientRect();
+  const w = box.width, h = box.height;
+  if (w <= 0 || h <= 0) return;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = Math.max(1, Math.round(w * dpr));
+  canvas.height = Math.max(1, Math.round(h * dpr));
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = "#203449";
+  ctx.setLineDash([2, 7]);
+  for (let x = w / 2 % 38; x < w; x += 38) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+  }
+  for (let y = h / 2 % 38; y < h; y += 38) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  state.projected = projectVertices(w, h);
+  const ordered = state.faces.map((f, i) => ({
+    face: f, index: i, depth: f.reduce((s, v) => s + state.projected[v].z, 0) / 3,
+  })).sort((a, b) => a.depth - b.depth);
+  for (const { face, index } of ordered) {
+    ctx.beginPath();
+    face.forEach((v, i) => {
+      const p = state.projected[v];
+      if (i === 0) ctx.moveTo(p.x, p.y);
+      else ctx.lineTo(p.x, p.y);
+    });
+    ctx.closePath();
+    ctx.fillStyle = index === state.selectedFace ? "#396784d4" : "#407e9f33";
+    ctx.fill();
+    ctx.lineWidth = 0.55;
+    ctx.strokeStyle = "#507b9860";
+    ctx.stroke();
+  }
+  for (const edge of state.edges) {
+    const a = state.projected[edge.a], b = state.projected[edge.b];
+    const selected = state.seams.has(seamKey(edge));
+    const hovered = edge === state.hoveredEdge;
+    ctx.strokeStyle = selected ? "#f39184" : hovered ? "#f1d794" : edge.faces.length === 2 ? "#80c6d9" : "#5f879e";
+    ctx.lineWidth = selected ? 3.6 : hovered ? 3 : edge.faces.length === 2 ? 1.8 : 1.25;
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+    if (selected) {
+      ctx.beginPath(); ctx.arc((a.x + b.x) / 2, (a.y + b.y) / 2, 3.5, 0, Math.PI * 2);
+      ctx.fillStyle = "#ffb0a0"; ctx.fill();
+    }
+  }
+  if (state.hoveredEdge) {
+    const edge = state.hoveredEdge;
+    const a = state.projected[edge.a], b = state.projected[edge.b];
+    const x = (a.x + b.x) / 2, y = (a.y + b.y) / 2;
+    const label = seamKey(edge) + (edge.faces.length === 2 ? " · Klick: Schnitt" : " · Rand");
+    ctx.font = "12px Segoe UI, sans-serif";
+    const tw = ctx.measureText(label).width;
+    const lx = Math.min(w - tw - 16, Math.max(8, x + 12));
+    const ly = Math.max(24, y - 14);
+    ctx.fillStyle = "#17212df0"; ctx.fillRect(lx - 6, ly - 17, tw + 12, 24);
+    ctx.fillStyle = "#f2e8d3"; ctx.fillText(label, lx, ly);
+  }
+}
+function edgeDistance(p, a, b) {
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const k = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / Math.max(1e-9, dx * dx + dy * dy)));
+  return Math.hypot(p.x - a.x - k * dx, p.y - a.y - k * dy);
+}
+function pickEdge(p) {
+  let match = null, distance = 12;
+  for (const edge of state.edges) {
+    const d = edgeDistance(p, state.projected[edge.a], state.projected[edge.b]);
+    if (d < distance) { match = edge; distance = d; }
+  }
+  return match;
+}
+function pointInside(p, a, b, c) {
+  const sign = (p1, p2, p3) => (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y);
+  const d1 = sign(p, a, b), d2 = sign(p, b, c), d3 = sign(p, c, a);
+  return !((d1 < 0 || d2 < 0 || d3 < 0) && (d1 > 0 || d2 > 0 || d3 > 0));
+}
+function pickFace(p) {
+  for (let i = state.faces.length - 1; i >= 0; i--) {
+    const face = state.faces[i];
+    if (pointInside(p, ...face.map(v => state.projected[v]))) return i;
+  }
+  return -1;
+}
+function updateSeamList() {
+  $("seamCount").textContent = state.seams.size;
+  const list = $("seamList");
+  list.replaceChildren();
+  if (!state.seams.size) {
+    const msg = document.createElement("span");
+    msg.className = "muted"; msg.textContent = "Noch keine";
+    list.appendChild(msg);
+    return;
+  }
+  for (const key of [...state.seams].sort()) {
+    const button = document.createElement("button");
+    button.className = "seamitem";
+    button.title = "Schnittkante entfernen";
+    button.textContent = key + " ×";
+    button.addEventListener("click", () => {
+      state.seams.delete(key); updateSeamList(); draw(); updatePreview();
+    });
+    list.appendChild(button);
+  }
+}
+async function updatePreview() {
+  if (!state.source) return;
+  $("errorDetail").textContent = "";
+  setStatus("Schnittmuster im Browser berechnen …");
+  try {
+    const result = TextilLabBrowserEngine.generate(state, {
+      seams: state.seams,
+      allowance: $("allowance").value,
+      density: $("density").value,
+      unit: $("units").value,
+    });
+    state.currentSvg = result.svg;
+    $("preview").innerHTML = result.svg; // SVG generated exclusively from numeric geometry.
+    $("pieces").textContent = String(result.pieces);
+    $("sewnArea").textContent = (result.sewnArea / 1e6).toFixed(4);
+    $("cutArea").textContent = (result.cutArea / 1e6).toFixed(4);
+    $("mass").textContent = result.mass.toFixed(1);
+    $("exportBtn").disabled = false;
+    setStatus("Schnittmuster direkt im Browser berechnet · " + result.pieces + " Teil(e)");
+  } catch (error) {
+    state.currentSvg = "";
+    clearStats();
+    $("preview").replaceChildren();
+    const msg = document.createElement("div");
+    msg.className = "placeholder";
+    msg.textContent = error.message;
+    $("preview").appendChild(msg);
+    $("errorDetail").textContent = "Abwicklung nicht möglich";
+    setStatus(error.message, true);
+  }
+}
+function position(e) {
+  const r = canvas.getBoundingClientRect();
+  return { x: e.clientX - r.left, y: e.clientY - r.top };
+}
+canvas.addEventListener("pointerdown", e => {
+  canvas.setPointerCapture(e.pointerId);
+  state.pointer = { last: position(e), initial: position(e), dragged: false };
+});
+canvas.addEventListener("pointermove", e => {
+  const p = position(e);
+  if (state.pointer && e.buttons) {
+    const dx = p.x - state.pointer.last.x, dy = p.y - state.pointer.last.y;
+    if (Math.hypot(p.x - state.pointer.initial.x, p.y - state.pointer.initial.y) > 5)
+      state.pointer.dragged = true;
+    if (state.pointer.dragged) {
+      state.yaw += dx * 0.008;
+      state.pitch = Math.max(-1.4, Math.min(1.4, state.pitch + dy * 0.008));
+    }
+    state.pointer.last = p;
+    state.hoveredEdge = null;
+  } else {
+    state.hoveredEdge = pickEdge(p);
+  }
+  draw();
+});
+canvas.addEventListener("pointerup", e => {
+  if (!state.pointer) return;
+  const wasDrag = state.pointer.dragged;
+  state.pointer = null;
+  if (wasDrag) return;
+  const p = position(e);
+  const edge = pickEdge(p);
+  if (edge && edge.faces.length === 2) {
+    const key = seamKey(edge);
+    if (state.seams.has(key)) state.seams.delete(key);
+    else state.seams.add(key);
+    updateSeamList();
+    updatePreview();
+  } else if (edge) {
+    setStatus("Außenkante ist bereits eine Stoffkante – bitte innere Kante wählen.");
+  } else {
+    state.selectedFace = pickFace(p);
+    $("faceInfo").textContent = state.selectedFace < 0 ? "Kante wählen" : "Dreieck #" + (state.selectedFace + 1) + " gewählt";
+  }
+  draw();
+});
+canvas.addEventListener("pointercancel", () => { state.pointer = null; });
+canvas.addEventListener("pointerleave", () => {
+  if (!state.pointer) { state.hoveredEdge = null; draw(); }
+});
+canvas.addEventListener("wheel", e => {
+  e.preventDefault();
+  state.zoom = Math.max(0.25, Math.min(8, state.zoom * (e.deltaY > 0 ? 0.9 : 1.1)));
+  draw();
+}, { passive: false });
+$("viewBtn").addEventListener("click", resetCamera);
+$("clearBtn").addEventListener("click", () => {
+  state.seams.clear(); updateSeamList(); draw(); updatePreview();
+});
+for (const id of ["allowance", "density", "units"]) {
+  $(id).addEventListener("change", () => { draw(); updatePreview(); });
+}
+$("material").addEventListener("change", () => {
+  if ($("material").value !== "custom") $("density").value = $("material").value;
+  updatePreview();
+});
+$("density").addEventListener("input", () => { $("material").value = "custom"; });
+$("objFile").addEventListener("change", async e => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  if (file.size > 2_000_000) return setStatus("OBJ-Datei darf maximal 2 MB groß sein.", true);
+  try { await loadModel(await file.text(), file.name); }
+  catch (error) { setStatus(error.message, true); }
+});
+async function loadExample() {
+  try {
+    const response = await fetch("./example.obj");
+    if (!response.ok) throw new Error("Beispiel nicht verfügbar");
+    await loadModel(await response.text(), "bent-panel.obj · Demo");
+  } catch (error) { setStatus(error.message, true); }
+}
+$("sampleBtn").addEventListener("click", loadExample);
+$("exportBtn").addEventListener("click", () => {
+  if (!state.currentSvg) return;
+  const url = URL.createObjectURL(new Blob([state.currentSvg], { type: "image/svg+xml;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url; link.download = "textillab-schnittmuster.svg";
+  document.body.append(link); link.click(); link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+});
+new ResizeObserver(draw).observe(canvas);
+loadExample();
