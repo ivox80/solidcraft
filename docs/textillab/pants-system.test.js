@@ -75,3 +75,24 @@ test("reference comparison requires exact printed source and matching body measu
  assert.throws(()=>registry.compare({...sample,book:{title:"",edition:"",pages:""}},d),/Buchtitel/);
  assert.ok(registry.rulesets.find(x=>x.id==="muller-und-sohn").status.includes("awaiting"));
 });
+
+
+test("HTML number inputs are strings and must still render numeric pants dimensions",()=>{
+ const strings=Object.fromEntries(
+   Object.entries(pants.defaults).map(([name,value])=>[name,String(value)])
+ );
+ const parsed=pants.draft(strings);
+ assert.equal(typeof parsed.bodyValues.outseam,"number");
+ assert.equal(typeof parsed.bodyValues.knee,"number");
+ assert.equal(parsed.bodyValues.outseam,108);
+ assert.equal(parsed.bodyValues.knee,48);
+ const svg=pants.render(strings).svg;
+ assert.equal(svg,pants.render().svg);
+ assert.match(svg,/SL 108\.0 cm/);
+ assert.match(svg,/Kn 24\.0 cm/);
+ assert.ok(!svg.includes("NaN")&&!svg.includes("Infinity"));
+ const modified=pants.render({...strings,outseam:"110",inseam:"82"}).svg;
+ assert.match(modified,/SL 110\.0 cm/);
+ assert.notEqual(modified,svg);
+ assert.throws(()=>pants.render({...strings,outseam:"abc"}),/Ungültiges Hosenmaß/);
+});
