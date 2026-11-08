@@ -4,6 +4,7 @@
 const TYPES=[
  ["top","Oberteil","VT · RT · Ärmel"],
  ["jacket","Jacke","Kragen · Ärmel"],
+ ["hood","Kapuze","DOB · 2 Seitenteile"],
  ["trousers","Hose","Vorder- / Hinterhose"],
  ["skirt","Rock","Abnäher · Bund"],
  ["glove","Handschuh","Hand · Daumen"],
@@ -14,14 +15,15 @@ const TYPES=[
 const CORE={
  top:["chest","waist","hip","shoulder","sleeve","ease"],
  jacket:["chest","waist","hip","back","shoulder","sleeve","ease"],
- trousers:["waist","hip","inseam"],
+ hood:[],trousers:["waist","hip","inseam"],
  skirt:["waist","hip"],glove:["hand","handLength"],
  beanie:["head"],hat:["head"],mesh:[]
 };
-const PARTS={top:["VT","RT","AR"],trousers:["VH","HH"]};
+const PARTS={top:["VT","RT","AR"],trousers:["VH","HH"],hood:["HOOD"]};
 const ICONS={
  top:'<path d="M19 10 26 7l6 6 6-6 7 3 8 13-8 5-5-7v29H16V21l-5 7-8-5z"/><path d="M26 7v5l6 6 6-6V7"/>',
  jacket:'<path d="M20 9 26 6l6 6 6-6 6 3 9 14-7 5-5-7v29H16V21l-5 7-7-5z"/><path d="m26 6 6 12 6-12M32 18v31M23 16l5 6m13-6-5 6"/><circle cx="34" cy="29" r="1"/><circle cx="34" cy="36" r="1"/>',
+ hood:'<path d="M12 51V30C12 15 21 6 36 6c12 0 20 11 20 24v7H42c-3-11-10-15-17-12v26zM12 47h14M31 14c9 3 13 11 13 18"/>',
  trousers:'<path d="M14 8h36l-2 19-8 24H30l2-23-2 23H20L12 27z"/><path d="M14 15h36M32 8v20m-16 1 11 2M48 29l-12 2"/>',
  skirt:'<path d="M19 10h26l-2 8 9 31H12l9-31z"/><path d="M20 17h24M25 10l2 7m10-7-2 7"/>',
  glove:'<path d="M19 51 9 37c-2-3 3-7 6-4l5 5V13c0-5 7-5 7 0v16-22c0-5 7-5 7 0v23-19c0-5 7-5 7 0v21-13c0-5 7-5 7 0v19c0 7-4 12-10 15z"/>',
@@ -117,7 +119,7 @@ function filterMeasures(){
   const input=label.querySelector("input[id^='m-']");if(!input)continue;
   label.dataset.hidden=String(!displayed.has(input.id.slice(2)));
  }
- main.style.display=template.value==="mesh"?"none":"";
+ main.style.display=(template.value==="mesh"||template.value==="hood")?"none":"";
  main.open=true;
 }
 function refreshZoom(){
@@ -159,12 +161,15 @@ function setStep(id){
  const t=template.value;
  const targets={
   template:host,
-  measure:t==="trousers"?
+  measure:t==="hood"?document.querySelector(".hood-setup .measure-details"):
+   t==="trousers"?
    document.querySelector(".pants-setup .measure-details"):
    document.querySelector(".sidebar > .section > .measure-details"),
-  construction:t==="trousers"?document.querySelector(".pants-setup"):
+  construction:t==="hood"?document.querySelector(".hood-setup"):
+   t==="trousers"?document.querySelector(".pants-setup"):
    t==="top"?document.querySelector(".v1-panel"):preview,
-  check:t==="trousers"?$("pantsRuleReport"):
+  check:t==="hood"?$("hoodRuleReport"):
+   t==="trousers"?$("pantsRuleReport"):
    t==="top"?$("draftRuleReport"):$("cutArea")
  };
  targets[id]?.scrollIntoView({behavior:"smooth",block:"nearest"});
