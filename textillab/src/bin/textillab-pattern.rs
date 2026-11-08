@@ -3,13 +3,15 @@
 use std::env;
 use std::fs;
 use std::path::Path;
+use textillab::drafting_rules::{self, Fit, Settings, Style};
 use textillab::garments::{export_svg, Garment, Measurements};
 
 fn main() -> Result<(), String> {
     let args: Vec<String> = env::args().skip(1).collect();
     if args.is_empty() || args[0] == "--help" {
         println!(
-            "Usage: textillab-pattern <top|jacket|trousers|glove|beanie|hat|skirt> [measure_cm=value] [--allowance mm] [--density g/m2] [--out file.svg]\n\
+            "Usage: textillab-pattern <top|jacket|trousers|glove|beanie|hat|skirt> [measure_cm=value] [--allowance mm] [--density g/m2] [--out file.svg]\n\\
+             Bodice v1.0 options: --fit fitted|regular|comfort|loose|oversize|custom, --style bodice|shirt|blouse|jacket|coat|sleeveless, --cap-ease mm, --torso-mm d, --hip-mm d, --hem-mm d, --sleeve-mm d\n\
              Measurements: chest waist hip back shoulder sleeve inseam head hand handLength ease.\n\
              Example: textillab-pattern trousers hip=110 waist=88 inseam=82 --allowance 10 --out trousers.svg\n\
              CAUTION: Concept pattern; fit, grading and sewing are not validated."
@@ -19,11 +21,24 @@ fn main() -> Result<(), String> {
     let garment: Garment = args[0].parse()?;
     let mut measures = Measurements::default();
     let (mut allowance, mut density) = (10.0, 210.0);
+    let mut draft_settings = Settings::default();
     let mut out = format!("{}-block.svg", garment.name());
     let mut index = 1;
     while index < args.len() {
         let argument = &args[index];
-        if matches!(argument.as_str(), "--allowance" | "--density" | "--out") {
+        if matches!(
+            argument.as_str(),
+            "--allowance"
+                | "--density"
+                | "--out"
+                | "--fit"
+                | "--style"
+                | "--cap-ease"
+                | "--torso-mm"
+                | "--hip-mm"
+                | "--hem-mm"
+                | "--sleeve-mm"
+        ) {
             index += 1;
             let value = args
                 .get(index)
@@ -32,6 +47,28 @@ fn main() -> Result<(), String> {
                 "--allowance" => allowance = value.parse().map_err(|_| "Invalid allowance")?,
                 "--density" => density = value.parse().map_err(|_| "Invalid density")?,
                 "--out" => out.clone_from(value),
+                "--fit" => draft_settings.fit = Fit::from_key(value)?,
+                "--style" => draft_settings.style = Style::from_key(value)?,
+                "--cap-ease" => {
+                    draft_settings.target_cap_ease_mm =
+                        value.parse().map_err(|_| "Invalid target ease")?
+                }
+                "--torso-mm" => {
+                    draft_settings.alterations.torso_mm =
+                        value.parse().map_err(|_| "Invalid torso adjustment")?
+                }
+                "--hip-mm" => {
+                    draft_settings.alterations.hip_mm =
+                        value.parse().map_err(|_| "Invalid hip adjustment")?
+                }
+                "--hem-mm" => {
+                    draft_settings.alterations.hem_mm =
+                        value.parse().map_err(|_| "Invalid hem adjustment")?
+                }
+                "--sleeve-mm" => {
+                    draft_settings.alterations.sleeve_mm =
+                        value.parse().map_err(|_| "Invalid sleeve adjustment")?
+                }
                 _ => {}
             }
         } else {
@@ -45,7 +82,21 @@ fn main() -> Result<(), String> {
         }
         index += 1;
     }
-    let report = export_svg(garment, measures, allowance, density)?;
+    let report = if garment == Garment::Top {
+        let drafted = drafting_rules::generate(measures, draft_settings, allowance, density)?;
+        println!(
+            "Construction system: TextilLab Experimental 1.0 | Armhole {:.2} mm | Sleeve cap {:.2} mm | Ease {:.2} mm (target {:.2}) | Side Δ {:.2} mm",
+            drafted.report.total_armhole_mm, drafted.report.sleeve_cap_mm,
+            drafted.report.sleeve_ease_mm, drafted.report.target_ease_mm,
+            drafted.report.side_difference_mm,
+        );
+        if !drafted.report.reachable {
+            eprintln!("WARNING: Target sleeve ease is out of the permitted cap-height range");
+        }
+        drafted.pattern
+    } else {
+        export_svg(garment, measures, allowance, density)?
+    };
     if let Some(parent) = Path::new(&out).parent() {
         if !parent.as_os_str().is_empty() {
             fs::create_dir_all(parent).map_err(|e| e.to_string())?;

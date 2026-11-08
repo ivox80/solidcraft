@@ -8,6 +8,7 @@
   <script defer src="./browser-engine.js"></script>
   <script defer src="./bodice-v2.js"></script>
   <script defer src="./pattern-library.js"></script>
+  <script defer src="./drafting-system.js"></script>
   <script defer src="./app.js"></script>
 </head>
 <body>
@@ -15,7 +16,7 @@
   <div class="brand">
     <div class="brandmark">SC</div>
     <div><strong>SolidCraft</strong><span> / TextilLab Studio</span></div>
-    <span class="tag">v0.7 · VT/RT Grundschnitt</span>
+    <span class="tag">v1.0 · Konstruktions-CAD</span>
   </div>
   <div class="topactions">
     <span class="topnote">Online-Demo · Browser-Geometrie</span>
@@ -55,6 +56,52 @@
       <details class="measure-details top-only" open><summary>Oberteil v2 · Konstruktionsmaße <span>(cm)</span></summary><div class="measure-grid"><label class="measure-input"><span>Vorderlänge bis Taille</span><input id="m-frontLength" type="number" min="0.5" max="300" step="0.5" value="46" aria-label="Vorderlänge bis Taille in Zentimeter"></label><label class="measure-input"><span>Rückenlänge bis Taille</span><input id="m-backWaist" type="number" min="0.5" max="300" step="0.5" value="43" aria-label="Rückenlänge bis Taille in Zentimeter"></label><label class="measure-input"><span>Brusthöhe</span><input id="m-bustHeight" type="number" min="0.5" max="300" step="0.5" value="27" aria-label="Brusthöhe in Zentimeter"></label><label class="measure-input"><span>Brustpunktabstand</span><input id="m-bustSpan" type="number" min="0.5" max="300" step="0.5" value="19" aria-label="Brustpunktabstand in Zentimeter"></label><label class="measure-input"><span>Halsumfang</span><input id="m-neck" type="number" min="0.5" max="300" step="0.5" value="38" aria-label="Halsumfang in Zentimeter"></label><label class="measure-input"><span>Armlochtiefe</span><input id="m-armholeDepth" type="number" min="0.5" max="300" step="0.5" value="23" aria-label="Armlochtiefe in Zentimeter"></label><label class="measure-input"><span>Taille bis Hüfte</span><input id="m-waistToHip" type="number" min="0.5" max="300" step="0.5" value="20" aria-label="Taille bis Hüfte in Zentimeter"></label><label class="measure-input"><span>Taille bis Saum</span><input id="m-hemBelowWaist" type="number" min="0.5" max="300" step="0.5" value="29" aria-label="Taille bis Saum in Zentimeter"></label><label class="measure-input"><span>Schulterabfall</span><input id="m-shoulderSlope" type="number" min="0.5" max="300" step="0.5" value="3" aria-label="Schulterabfall in Zentimeter"></label><label class="measure-input"><span>Oberarmumfang</span><input id="m-upperArm" type="number" min="1" max="300" step="0.5" value="34" aria-label="Oberarmumfang in Zentimeter"></label><label class="measure-input"><span>Handgelenkumfang</span><input id="m-wrist" type="number" min="1" max="300" step="0.5" value="19" aria-label="Handgelenkumfang in Zentimeter"></label></div><div class="hint">VT, RT und 2 Ärmel mit Brust-, Taillen- und Hüftlinien, Abnähern, Ärmelkugel und Fadenlauf.</div></details><div class="hint">Grundschnitt-Prototypen: Maße und Mehrweite anpassen, Passform mit Probeteil prüfen.</div>
     </div>
     
+
+    <div class="v1-panel top-only">
+      <div class="sectiontitle">SCHNITTSYSTEM · TEXTILLAB EXPERIMENTAL 1</div>
+      <div class="section">
+        <div class="fieldrow">
+          <label for="draftFit">Passform</label>
+          <select id="draftFit"><option value="fitted">Körpernah</option><option value="regular" selected>Regular</option><option value="comfort">Bequem</option><option value="loose">Weit</option><option value="oversize">Oversize</option><option value="custom">Eigene Mehrweite</option></select>
+        </div>
+        <div class="fieldrow">
+          <label for="draftStyle">Modellvariante</label>
+          <select id="draftStyle"><option value="bodice" selected>Grundschnitt</option><option value="shirt">Shirt</option><option value="blouse">Bluse</option><option value="jacket">Jackenbasis</option><option value="coat">Mantelbasis</option><option value="sleeveless">Ärmellos</option></select>
+        </div>
+        <div class="fieldrow">
+          <label for="draftEase">Ziel-Einhalteweite</label>
+          <div class="inputunit"><input id="draftEase" type="number" value="22" step="1" min="0" max="45"><span>mm</span></div>
+        </div>
+      </div>
+      <div class="sectiontitle">VERLÄNGERN / KÜRZEN</div>
+      <div class="section">
+        <p class="hint">Änderungen wirken auf benannte Körperabschnitte und lösen eine neue Konstruktion aus, nicht nur eine SVG-Skalierung.</p>
+        <div class="measure-grid">
+          <label class="measure-input"><span>K1 Brust–Taille</span><input id="zone-torso" type="number" value="0" step="0.5" min="-12" max="35" aria-label="Brust Taille verlängern kürzen in cm"></label>
+          <label class="measure-input"><span>K2 Taille–Hüfte</span><input id="zone-hip" type="number" value="0" step="0.5" min="-12" max="35" aria-label="Taille Hüfte verlängern kürzen in cm"></label>
+          <label class="measure-input"><span>K3 Unterhalb Hüfte</span><input id="zone-hem" type="number" value="0" step="0.5" min="-12" max="35" aria-label="Saum verlängern kürzen in cm"></label>
+          <label class="measure-input"><span>K4 Ärmellänge</span><input id="zone-sleeve" type="number" value="0" step="0.5" min="-12" max="35" aria-label="Ärmel verlängern kürzen in cm"></label>
+        </div>
+        <div class="v1-actions">
+          <button id="draftUndo" class="btn soft" type="button">↶ Rückgängig</button>
+          <button id="draftRedo" class="btn soft" type="button">↷ Wiederholen</button>
+        </div>
+      </div>
+      <div class="sectiontitle">ZEICHNUNGSEBENEN</div>
+      <div class="section layer-grid" id="draftLayers">
+        <label><input type="checkbox" id="layer-guides" checked> Konstruktionslinien</label>
+        <label><input type="checkbox" id="layer-dimensions" checked> Bemaßung</label>
+        <label><input type="checkbox" id="layer-points" checked> Punktnamen</label>
+        <label><input type="checkbox" id="layer-alterations" checked> Änderungslinien</label>
+        <label><input type="checkbox" id="layer-notes" checked> Nahtkontrolle</label>
+      </div>
+      <div class="v1-actions">
+        <button id="draftSave" class="btn soft" type="button">Projekt JSON</button>
+        <label for="draftLoad" class="btn soft">Projekt öffnen</label>
+        <input id="draftLoad" type="file" accept="application/json,.json" hidden>
+      </div>
+    </div>
+
     <div class="sectiontitle mesh-only">TEXTIL-PROJEKT</div>
     <div class="section mesh-only">
       <label class="fieldlabel" for="objFile">3D-Oberfläche importieren</label>
@@ -129,6 +176,8 @@
     <div class="metric"><span>Nahtfläche</span><strong id="sewnArea">–</strong><small>m²</small></div>
     <div class="metric"><span>Zuschnittfläche</span><strong id="cutArea">–</strong><small>m²</small></div>
     <div class="metric"><span>Stoffgewicht (ca.)</span><strong id="mass">–</strong><small>g</small></div>
+<div class="sectiontitle withgap top-only">KONSTRUKTIONSREGELN</div>
+    <div id="draftRuleReport" class="rule-report top-only"></div>
     <div class="sectiontitle withgap">HINWEISE</div>
     <p class="inspectorcopy">Diese kostenlose Online-Vorschau verwendet eine JavaScript-Umsetzung der Kerngeometrie. Die installierbare TextilLab-Version berechnet mit Rust. Aktuell sind abwickelbare Dreiecksnetze und konvexe Zuschnittkonturen mit Nahtzugabe unterstützt.</p>
     <p class="inspectorcopy">Doppelt gekrümmte Flächen benötigen später Dehnungsoptimierung und automatische Teilungsnähte.</p>

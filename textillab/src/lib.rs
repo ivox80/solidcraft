@@ -294,3 +294,6 @@ pub mod garments;
 
 /// Detailed front/back VT/RT bodice prototype with darts and technical drawing.
 pub mod bodice_v2;
+
+/// Experimental named construction rules, alterations and seam-balance reports.
+pub mod drafting_rules;
