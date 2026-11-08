@@ -49,6 +49,8 @@ jobs:
           node --check ../docs/textillab/seam-contracts.js
           node --test ../docs/textillab/hood-seam-hardening.test.js
           node --check ../docs/textillab/hood-system.js
+          node --check ../docs/textillab/hood-drape.js
+          node --test ../docs/textillab/hood-drape.test.js
           node --check ../docs/textillab/garment-3d.js
           node --test ../docs/textillab/hood-and-3d.test.js
           node --check ../docs/textillab/studio-workspace.js
