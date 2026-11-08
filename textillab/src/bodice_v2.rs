@@ -305,7 +305,7 @@ pub fn export(m: Measurements, seam_mm: f64, density_g_m2: f64) -> Result<Garmen
     svg.push_str(&render_panel(&panels[0], 75.0, false, seam_mm)?);
     svg.push_str(&render_panel(&panels[1], 515.0, true, seam_mm)?);
     svg.push_str("<text x=\"75\" y=\"29\" font-size=\"15\" font-weight=\"700\" fill=\"#3b454e\">TEXTILLAB · VT / RT GRUNDSCHNITT v2</text>\n");
-    svg.push_str("<text x=\"75\" y=\"49\" font-size=\"11\" fill=\"#62584e\">Abnäher, Hilfslinien &amp; Fadenlauf · Maße in mm · keine freigegebene Fertigungsvorlage</text>\n</svg>\n");
+    svg.push_str("<text x=\"75\" y=\"49\" font-size=\"11\" fill=\"#62584e\">Abnäher, Hilfslinien &amp; Fadenlauf · Maße in mm · KONZEPT-GRUNDSCHNITT · keine freigegebene Fertigungsvorlage</text>\n</svg>\n");
     Ok(GarmentExport {
         svg,
         parts: panels.into_iter().map(|p| p.piece).collect(),
