@@ -263,3 +263,6 @@ html,body{min-width:320px}
 .top-seam-line span{font-size:10px;color:#bdd4e0;overflow-wrap:anywhere}
 .top-seam-line small{font-size:10px;color:#a7c8d5}
 .top-seam-line.warning small{color:#f5bea1}
+
+.hood-mode .top-avatar-linked{display:none!important}
+.bodice-v2-mode .top-avatar-linked{display:flex!important}
