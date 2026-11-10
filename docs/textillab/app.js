@@ -455,8 +455,69 @@ function showDrapeReport(report,error=null){
   "Geometrische Nahtverbindung hergestellt. PBD-Verformung ist nur eine Näherung und nicht für Fertigung validiert.";
  parent.append(note);
 }
+
+function showTopSeamReport(report,error=null){
+ const el=$("topSewingReport");el.replaceChildren();
+ const status=document.createElement("div");
+ status.className="hood-drape-status warning";
+ if(error){
+  status.textContent="3D-Nähbaugruppe gesperrt: "+error.message;
+  el.append(status);return;
+ }
+ if(!report){
+  status.textContent="Keine 3D-Nahtdaten vorhanden.";el.append(status);return;
+ }
+ status.textContent=report.sewnEdgePairs+" Nähkantenpaare verbunden · "+
+  report.pendingProcessing+" benötigen Nacharbeit · keine Passformfreigabe";
+ el.append(status);
+ const intro=document.createElement("p");intro.className="hint";
+ intro.textContent="Jede Verbindung besitzt zwei reale 2D-Schnittkanten. Die 3D-Netze teilen dort die selben Punkte; offene Ärmelbündchen und Halsausschnitte bleiben offen.";
+ el.append(intro);
+ for(const seam of report.seamPairs){
+  const line=document.createElement("div");
+  line.className="top-seam-line "+(seam.status==="OK"?"ok":"warning");
+  const heading=document.createElement("strong");heading.textContent=seam.id;
+  const source=document.createElement("span");
+  source.textContent=seam.a+"."+seam.edgeA+" ↔ "+seam.b+"."+seam.edgeB;
+  const diff=document.createElement("span");diff.textContent=
+   seam.lengthAMm.toFixed(1)+" / "+seam.lengthBMm.toFixed(1)+
+   " mm · Differenz "+seam.deltaMm.toFixed(1)+" mm";
+  const state=document.createElement("small");
+  state.textContent=seam.status==="OK"?"Längen passend":
+   seam.mode==="ease"?"Einhalteweite planen und prüfen":
+   seam.mode==="stretch"?"Ungenügende Kantenlänge – Materialdehnung prüfen":"Unpassende Nähkanten";
+  line.append(heading,source,diff,state);el.append(line);
+ }
+ const result=document.createElement("p");result.className="hint";
+ result.textContent="Kantenverzug RMS "+report.rmsEdgeStrainPct.toFixed(1)+
+  " %, maximal "+report.maxEdgeStrainPct.toFixed(1)+
+  " %. Nicht geschlossene Abnäher: "+report.unclosedDarts.join(", ")+
+  ". Dies ist ein Stoff-Prototyp, kein geprüfter Näherfolg.";
+ el.append(result);
+}
+function syncTopAvatar(){
+ if(!$("topAvatarLink").checked)return;
+ const m=catalogMeasurements();
+ for(const key of ["chest","waist","hip","shoulder","neck"]){
+  const id="fit"+key[0].toUpperCase()+key.slice(1);
+  if($(id)&&Number.isFinite(Number(m[key])))$(id).value=m[key];
+ }
+}
+
 function refreshFitting(){
- if($("templateType").value!=="hood"||!hoodDraft)return;
+ const current=$("templateType").value;
+ if(current==="top"&&latestDraft){
+  try{
+   const report=garmentRenderer.setModel("top",{
+    topDraft:latestDraft,mannequin:mannequinMeasurements(),fabric:fabricSettings()
+   });
+   showTopSeamReport(report);
+  }catch(error){
+   garmentRenderer.clear();showTopSeamReport(null,error);
+  }
+  return;
+ }
+ if(current!=="hood"||!hoodDraft)return;
  try{
   const report=garmentRenderer.setModel("hood",{
     ...hoodDraft.model,hoodDraft,mannequin:mannequinMeasurements(),fabric:fabricSettings()
@@ -483,7 +544,9 @@ function applyFabricPreset(){
  $("fabricClearance").value=base.clearance;
 }
 function loadMannequinProfile(){
- const sample=MANNEQUIN_DEFAULTS[$("hoodProfile").value];
+ const type=$("templateType").value;
+ const group=type==="hood"?$("hoodProfile").value:$("fitProfile").value;
+ const sample=MANNEQUIN_DEFAULTS[group];
  if(!sample)return;
  for(const [key,cm]of Object.entries(sample)){
   const id="fit"+key[0].toUpperCase()+key.slice(1);
@@ -551,8 +614,9 @@ function updateCatalog() {
     hoodDraft=kind==="hood"?result:null;
     if(kind==="hood")hoodCheckReport(result);
     else $("hoodRuleReport").replaceChildren();
-    if(kind==="hood")refreshFitting();
-    else {garmentRenderer.setModel(kind,catalogMeasurements());showDrapeReport(null);}
+    if(kind==="top"){syncTopAvatar();refreshFitting();showDrapeReport(null);}
+    else if(kind==="hood"){refreshFitting();showTopSeamReport(null);}
+    else {garmentRenderer.setModel(kind,catalogMeasurements());showDrapeReport(null);showTopSeamReport(null);}
     requestAnimationFrame(garmentRenderer.draw);
     state.currentSvg = result.svg;
     $("preview").innerHTML = result.svg;
@@ -593,6 +657,7 @@ function updateCatalog() {
   } catch (error) {
     state.currentSvg = "";
     latestDraft=null;hoodDraft=null;
+    if(kind==="top")showTopSeamReport(null,error);
     if(kind==="hood")showDrapeReport(null,error);
     if(kind==="hood"){
       const note=$("hoodRuleReport");note.replaceChildren();
@@ -879,6 +944,15 @@ $("hoodVariant").addEventListener("change",()=>{
  if($("templateType").value==="hood")updateCatalog();
 });
 $("hoodProfile").addEventListener("change",loadMannequinProfile);
+$("fitProfile").addEventListener("change",()=>{
+ if($("templateType").value==="top")$("topAvatarLink").checked=false;
+ loadMannequinProfile();
+});
+$("topAvatarLink").addEventListener("change",()=>{
+ if($("topAvatarLink").checked)syncTopAvatar();
+ refreshFitting();
+});
+
 $("fabricPreset").addEventListener("change",()=>{applyFabricPreset();refreshFitting();});
 for(const name of ["fabricStiffness","fabricBending","fabricDrape"]){
  $(name).addEventListener("input",()=>{
@@ -887,7 +961,10 @@ for(const name of ["fabricStiffness","fabricBending","fabricDrape"]){
  });
 }
 for(const key of ["Height","Shoulder","Chest","Waist","Hip","Neck"]){
- $("fit"+key).addEventListener("input",refreshFitting);
+ $("fit"+key).addEventListener("input",()=>{
+  if($("templateType").value==="top")$("topAvatarLink").checked=false;
+  refreshFitting();
+ });
 }
 $("fabricClearance").addEventListener("input",refreshFitting);
 $("garmentFullBody").addEventListener("click",e=>{
