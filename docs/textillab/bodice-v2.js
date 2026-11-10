@@ -180,11 +180,13 @@ function createSleeve(m, opts={}) {
   const length=m.sleeve;
   if(length<=capHeight+110)throw Error("Die Armlänge ist für die Ärmelkugel zu kurz.");
   const center=bicepWidth*.5;
+  const capCenter=bicepWidth*Number(opts.apexFraction??.5);
+  if(!Number.isFinite(capCenter)||capCenter<bicepWidth*.40||capCenter>bicepWidth*.62)throw Error('Ärmelkugel-Vorder/Rückenverteilung ungültig.');
   const shape=new Shape();
   // Two asymmetric cap curves approximate front and back armscyes.
   shape.move(0,capHeight)
-    .cubic(P(bicepWidth*.10,capHeight*.38),P(center*.50,capHeight*.08),P(center,0),24)
-    .cubic(P(center+bicepWidth*.23,-1),P(bicepWidth*.93,capHeight*.50),P(bicepWidth,capHeight),24)
+    .cubic(P(bicepWidth*.10,capHeight*.38),P(capCenter*.50,capHeight*.08),P(capCenter,0),24)
+    .cubic(P(capCenter+bicepWidth*.23,-1),P(bicepWidth*.93,capHeight*.50),P(bicepWidth,capHeight),24)
     .cubic(P(bicepWidth*.94,capHeight+120),P(center+cuffWidth*.55,length-85),P(center+cuffWidth*.5,length),20)
     .line(center-cuffWidth*.5,length)
     .cubic(P(center-cuffWidth*.55,length-85),P(bicepWidth*.06,capHeight+120),P(0,capHeight),20)
