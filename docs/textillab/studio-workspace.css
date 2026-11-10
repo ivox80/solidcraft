@@ -240,3 +240,26 @@ html,body{min-width:320px}
 .hood-drape-metrics strong{font-size:12px;font-variant-numeric:tabular-nums;color:#e3f7fa}
 .hood-fit-panel .hint{line-height:1.55}
 @media(max-width:600px){.hood-drape-metrics{grid-template-columns:1fr}}
+
+
+/* TextilLab 1.5: true dual-edge seam sewing and cloth controls for bodice. */
+.fit-only,.top-seam-only{display:none}
+.bodice-v2-mode .fit-only,.hood-mode .fit-only,
+.bodice-v2-mode .top-seam-only{display:block}
+.hood-mode #topSewingReport,.bodice-v2-mode #hoodDrapeReport{display:none}
+.fit-only{margin:10px 0 18px;border-top:1px solid #486778;padding-top:14px}
+.top-avatar-linked{margin:10px 0 12px;display:flex!important;gap:8px;
+ align-items:flex-start;color:#dbedf6;font-size:11px;line-height:1.45;
+ background:#223d4a;border:1px solid #446879;border-radius:8px;padding:10px}
+.top-avatar-linked input{accent-color:#7adedc}
+#topSewingReport{display:none;max-width:100%;padding:10px;margin-bottom:12px;
+ border:1px solid #385b6d;border-radius:9px;background:#122c3c}
+.bodice-v2-mode #topSewingReport{display:grid;gap:7px}
+.top-seam-line{background:#1c3947;border:1px solid #365869;border-radius:7px;
+ display:grid;grid-template-columns:1fr;gap:3px;padding:8px 10px}
+.top-seam-line.ok{border-left:3px solid #76ccba}
+.top-seam-line.warning{border-left:3px solid #edaa84}
+.top-seam-line strong{color:#f0f8fa;font-size:11px}
+.top-seam-line span{font-size:10px;color:#bdd4e0;overflow-wrap:anywhere}
+.top-seam-line small{font-size:10px;color:#a7c8d5}
+.top-seam-line.warning small{color:#f5bea1}
