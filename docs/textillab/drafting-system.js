@@ -95,27 +95,39 @@ function defaultsCm(field) {
     ({frontLength:46,backWaist:43,waistToHip:20,hemBelowWaist:29,sleeve:62})[field]);
 }
 function balancedDraft(m,target) {
-  // Bisection adjusts sleeve-cap height (not garment length or biceps width).
-  // This is a *mathematical* cap-length match, not a validated pattern system.
-  const make = h => B.draft(m,{capHeightMm:h});
-  let low=80,high=215,lo=make(low),hi=make(high);
-  let loEase=seamCheck(lo).sleeveEaseMm,hiEase=seamCheck(hi).sleeveEaseMm;
-  if(target<loEase || target>hiEase){
-    const candidate=Math.abs(target-loEase)<Math.abs(target-hiEase)?lo:hi;
-    return {draft:candidate,capHeightMm:candidate===lo?low:high,
-      reachable:false,achievedEaseMm:seamCheck(candidate).sleeveEaseMm};
+  // Match BOTH sleeve-cap sections to their own armholes; total length
+  // alone can hide a short front section and excessive back ease.
+  // This remains an original numerical drafting experiment, not a
+  // verified Müller-&-Sohn cap rule or textile fit guarantee.
+  const source=B.draft(m,{capHeightMm:90,apexFraction:.53});
+  const pre=seamCheck(source);
+  const tFront=pre.frontArmholeMm+target*.4,tBack=pre.backArmholeMm+target*.6;
+  const cap=(h,ratio)=>{
+    const d=B.draft(m,{capHeightMm:h,apexFraction:ratio});
+    const a=d.pieces[2].outline;
+    return {draft:d,front:polylen(a,0,24),back:polylen(a,24,48),h,ratio};
+  };
+  let h=90,ratio=.54,trial=cap(h,ratio);
+  for(let i=0;i<18;i++){
+    const f=trial.front-tFront,b=trial.back-tBack;
+    if(Math.max(Math.abs(f),Math.abs(b))<.04)break;
+    const dh=.5,dr=.001;
+    const ah=cap(Math.min(250,h+dh),ratio),
+      ar=cap(h,Math.min(.615,ratio+dr));
+    const fh=(ah.front-trial.front)/dh,bh=(ah.back-trial.back)/dh,
+      fr=(ar.front-trial.front)/dr,br=(ar.back-trial.back)/dr;
+    const det=fh*br-fr*bh;
+    if(!Number.isFinite(det)||Math.abs(det)<1e-5)break;
+    const stepH=(-f*br+fr*b)/det,stepR=(-fh*b+f*bh)/det;
+    h=Math.min(250,Math.max(60,h+Math.max(-16,Math.min(16,stepH))));
+    ratio=Math.min(.615,Math.max(.405,ratio+Math.max(-.045,Math.min(.045,stepR))));
+    trial=cap(h,ratio);
   }
-  let trial=lo,h=low;
-  for(let i=0;i<28;i++) {
-    h=(low+high)*.5;
-    trial=make(h);
-    const diff=seamCheck(trial).sleeveEaseMm-target;
-    if(Math.abs(diff)<.06)break;
-    if(diff>0) high=h;
-    else low=h;
-  }
-  return {draft:trial,capHeightMm:h,reachable:true,
-    achievedEaseMm:seamCheck(trial).sleeveEaseMm};
+  const reachable=Math.abs(trial.front-tFront)<.45&&Math.abs(trial.back-tBack)<.45;
+  return {draft:trial.draft,capHeightMm:h,apexFraction:ratio,
+    reachable,achievedEaseMm:trial.front+trial.back-pre.totalArmholeMm,
+    frontEaseMm:trial.front-pre.frontArmholeMm,
+    backEaseMm:trial.back-pre.backArmholeMm};
 }
 function rules(m,metric,cap,profile) {
   // formula provenance: proprietary construction systems are NOT implied.
@@ -293,14 +305,17 @@ function generate(measurements={},options={}) {
   const metric=seamCheck(d);
   const onlyBody=!profile.style.sleeves;
   const result=B.render(profile.measurements,Number(options.allowance??10),
-    Number(options.density??210), {capHeightMm:balanced.capHeightMm,sleeves:!onlyBody});
+    Number(options.density??210), {capHeightMm:balanced.capHeightMm,
+      apexFraction:balanced.apexFraction,sleeves:!onlyBody});
   result.svg=layeredDrawing(result.svg,d,profile,options,metric);
   const m=B.measureValues(profile.measurements);
   result.rules=rules(m,metric,balanced,profile);
   result.measures=metric;
   result.profile=profile;
   result.capBalance={targetEaseMm:profile.target,actualEaseMm:metric.sleeveEaseMm,
-    capHeightMm:balanced.capHeightMm,reachable:balanced.reachable};
+    capHeightMm:balanced.capHeightMm,apexFraction:balanced.apexFraction,
+    frontEaseMm:balanced.frontEaseMm,backEaseMm:balanced.backEaseMm,
+    reachable:balanced.reachable};
   result.namedPoints=namedPoints(d);
   result.version="TextilLab 1.0 experimental";
   return result;
