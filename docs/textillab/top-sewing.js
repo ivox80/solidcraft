@@ -291,8 +291,8 @@ function stitchPanels(panels,contracts){
 }
 function createBody(mm){
  const models=[];
- function create(name,color,rings){
-  const mesh={name,color,body:true,vertices:[],faces:[],edgeGroups:[]};
+ function create(name,color,rings,fullBodyOnly=false){
+  const mesh={name,color,body:true,fullBodyOnly,vertices:[],faces:[],edgeGroups:[]};
   const N=28,rows=[];
   for(const [y,rx,rz,x=0,z=0]of rings){
    const ring=[];
@@ -313,6 +313,14 @@ function createBody(mm){
   [-650,hip*.90,hip*.70],[-430,hip*.98,hip*.84],
   [-220,waist*.98,waist*.83],[10,chest, chest*.82],
   [170,chest*.84,chest*.67],[210,mm.neck/(2*PI)*1.2,mm.neck/(2*PI)]]);
+ const scale=mm.height/1680;
+ const skullCirc=Math.max(490,Math.min(650,mm.neck*1.5)); // visually estimated until head is measured
+ const skull=skullCirc/(2*PI);
+ create("Maßpuppe · Kopf (geschätzt)","#b2a59a",[
+  [200,mm.neck/(2*PI),mm.neck/(2*PI)*.83],
+  [253,skull*.83,skull*.75],
+  [315,skull,skull*.94],[380,skull*.78,skull*.76],
+  [422,skull*.16,skull*.20]]);
  const upper=mm.upperArm/(2*PI),wrist=mm.wrist/(2*PI);
  for(const side of [-1,1]){
   const x=mm.shoulder*.55;
@@ -322,6 +330,14 @@ function createBody(mm){
    [30,upper*.99,upper*.88,side*(x+14),0],
    [210,upper*.85,upper*.83,side*x,0]
   ]);
+  const hipSide=mm.hip/(2*PI)*.51;
+  create("Maßpuppe · Bein "+side,"#a69b92",[
+    [-650*scale,mm.hip*.072,mm.hip*.064,side*hipSide,-3],
+    [-900*scale,mm.hip*.050,mm.hip*.048,side*hipSide,12],
+    [-1200*scale,mm.hip*.042,mm.hip*.045,side*hipSide,5],
+    [-1510*scale,mm.hip*.029,mm.hip*.035,side*hipSide,10],
+    [-1540*scale,mm.hip*.027,mm.hip*.032,side*hipSide,12]
+  ],true);
  }
  return models;
 }
@@ -460,14 +476,15 @@ function construct(draft,body={},fabric={}){
   faces:stitched.faces,edgeGroups:stitched.edgeGroups};
  const unexpected=contracts.filter(c=>c.status!=="OK");
  const metric={
-  seamCount:contracts.length,
+  seamCount:contracts.filter(c=>!c.id.startsWith("Stoffbruch")).length,
+  foldPairs:contracts.filter(c=>c.id.startsWith("Stoffbruch")).length,
   seamPairs:contracts.map(({id,a,edgeA,b,edgeB,status,mode,deltaMm,
      lengthAMm,lengthBMm,plannedEaseTotalMm,plannedEaseMm})=>({
      id,a,edgeA,b,edgeB,status,mode,deltaMm,lengthAMm,
      lengthBMm,plannedEaseTotalMm,plannedEaseMm,
      connected:true
   })),
-  sewnEdgePairs:contracts.length,
+  sewnEdgePairs:contracts.filter(c=>!c.id.startsWith("Stoffbruch")).length,
   missingSeamPartners:0,
   welded:true,centerSeamGapMm:0,
   panelCount:panels.length,
