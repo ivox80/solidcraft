@@ -7,6 +7,7 @@
 "use strict";
 const PI=Math.PI,clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 const HoodDrape=(typeof module!=="undefined"&&module.exports)?require("./hood-drape.js"):root.TextilLabHoodDrape;
+const TopSewing=(typeof module!=="undefined"&&module.exports)?require("./top-sewing.js"):root.TextilLabTopSewing;
 const createMesh=(name,color,body=false)=>({name,color,body,vertices:[],faces:[],edgeGroups:[]});
 function v(m,x,y,z){m.vertices.push([x,y,z]);return m.vertices.length-1}
 function tri(m,a,b,c){m.faces.push([a,b,c])}
@@ -130,6 +131,7 @@ function bodyModel(type,data={}){
 }
 function vtx(mesh,x,y,z){return v(mesh,x,y,z)}
 function modelFor(type,data={}){
+ if(type==="top" && data.topDraft)return TopSewing.construct(data.topDraft,data.mannequin,data.fabric).meshes;
  if(type==="hood")return data.hoodDraft?.parts?.[0]?.edges?
    HoodDrape.construct(data.hoodDraft,data.mannequin,data.fabric).meshes:hoodModel(data);
  if(type==="top"||type==="jacket"){
@@ -229,16 +231,20 @@ function createRenderer(canvas){
    }
   }
   ctx.fillStyle="#b2cfda";ctx.font="11px Segoe UI, Arial";
-  ctx.fillText(state.report?"3D · vernähte Schnittflächen · PBD-Prototyp":
+  ctx.fillText(state.report?"3D · gekoppelte Schnittflächen · PBD-Prototyp":
     "3D · schematische Drapierung",12,23);
   if(state.report){
     const report=state.report;
     ctx.fillStyle=report.fitRisk==="HIGH_STRAIN"?"#f8b59c":"#a5d6cb";
     ctx.font="10px Segoe UI, Arial";
-    ctx.fillText("Nahtspalt "+report.centerSeamGapMm.toFixed(2)+
+    ctx.fillText((report.seamPairs?"Nahtkanten "+report.sewnEdgePairs+" · Nahtspalt ":
+      "Nahtspalt ")+report.centerSeamGapMm.toFixed(2)+
       " mm · Kantenverzug "+report.rmsEdgeStrainPct.toFixed(1)+" % RMS",12,40);
     if(report.fitRisk==="HIGH_STRAIN"){
-      ctx.fillStyle="#f5ae92";ctx.fillText("HOHER VERZUG · PASSFORM NICHT FREIGEGEBEN",12,56);
+      ctx.fillStyle="#f5ae92";
+      ctx.fillText(report.seamPairs?
+        "NAHTABGLEICH / STOFFVERZUG OFFEN · NICHT FREIGEGEBEN":
+        "HOHER VERZUG · PASSFORM NICHT FREIGEGEBEN",12,56);
     }
   }
   ctx.fillStyle="#7a9cab";ctx.font="10px Segoe UI, Arial";ctx.fillText("Ziehen: drehen · Rad: zoomen",12,h-14);
@@ -260,7 +266,12 @@ function createRenderer(canvas){
  },{passive:false});
  return {setModel(type,data){
     state.model={type,data};
-    if(type==="hood"&&data.hoodDraft?.parts?.[0]?.edges){
+    if(type==="top"){
+      if(!data.topDraft?.construction?.pieces)
+        throw Error("Ohne 2D-Schnittteile wird kein angeblich vernähtes Oberteil erzeugt.");
+      const sewn=TopSewing.construct(data.topDraft,data.mannequin,data.fabric);
+      state.meshes=sewn.meshes;state.report=sewn.metrics;state.clothMaterial=data.fabric;
+    }else if(type==="hood"&&data.hoodDraft?.parts?.[0]?.edges){
       const sewn=HoodDrape.construct(data.hoodDraft,data.mannequin,data.fabric);
       state.meshes=sewn.meshes;state.report=sewn.metrics;state.clothMaterial=sewn.material;
     }else{

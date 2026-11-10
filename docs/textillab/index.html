@@ -13,6 +13,7 @@
   <script defer src="./seam-contracts.js"></script>
   <script defer src="./hood-system.js"></script>
   <script defer src="./hood-drape.js"></script>
+  <script defer src="./top-sewing.js"></script>
   <script defer src="./garment-3d.js"></script>
   <script defer src="./pattern-library.js"></script>
   <script defer src="./drafting-system.js"></script>
@@ -24,7 +25,7 @@
   <div class="brand">
     <div class="brandmark">SC</div>
     <div><strong>SolidCraft</strong><span> / TextilLab Schnittatelier</span></div>
-    <span class="tag">v1.4 · Schnittgebundene 3D-Drapierung</span>
+    <span class="tag">v1.5 · Nahtbaugruppe und Stoff</span>
   </div>
   <div class="topactions">
     <span class="topnote">Online-Demo · Browser-Geometrie</span>
@@ -124,8 +125,17 @@
  </div>
  <div class="sectiontitle">KONSTRUKTIONSREGELN UND NAHTKONTROLLE</div>
  <div class="section" id="hoodRuleReport" aria-live="polite"></div>
+ <div class="section"><p class="hint" id="hoodSourceNote">Damenwerte teilweise öffentlich dokumentiert. Kein geprüftes Serien-Schnittsystem.</p></div>
+</div>
+
+<div class="fit-only">
  <div class="sectiontitle">3D-ANPROBE · KÖRPER UND STOFF</div>
+ <label class="top-seam-only top-avatar-linked"><input id="topAvatarLink" type="checkbox" checked> Körpermaße automatisch mit dem Oberteil synchronisieren</label>
  <div class="section hood-fit-panel">
+  <label class="fieldlabel" for="fitProfile">3D-Körperprofil (Beispielmaße, keine Normgrößentabelle)</label>
+  <select id="fitProfile" class="full">
+    <option value="women">Damen</option><option value="men">Herren</option><option value="child">Kinder</option>
+  </select>
   <details class="measure-details" open>
    <summary>Maßpuppe einstellen <span>(cm)</span></summary>
    <div class="measure-grid">
@@ -153,15 +163,19 @@
      <input id="fabricBending" type="range" min=".02" max="1" step=".01" value=".30"></label>
     <label for="fabricDrape">Schwerkraft-Drapierung <output id="fabricDrapeValue">0,58</output>
      <input id="fabricDrape" type="range" min="0" max="2" step=".02" value=".58"></label>
-    <label for="fabricClearance">Abstand zum Kopf (mm)
+    <label for="fabricClearance">Abstand zum Körper (mm)
      <input id="fabricClearance" type="number" min="2" max="35" step="1" value="9"></label>
    </div>
   </details>
-  <p class="hint">Stoffverhalten: begrenztes Feder-/Masse-Modell mit Schwerkraft und Kopfkollision. Kein kalibrierter Stoffsolver oder Nachweis der Passform.</p>
+  <p class="hint">Stoffverhalten: Feder-/Masse-Modell mit Schwerkraft und Körperkollision. Stoffeigenschaften sind beispielhaft, nicht kalibriert. Faltenwurf und Passform sind nicht freigegeben.</p>
   <div id="hoodDrapeReport" class="hood-drape-report" aria-live="polite">3D-Nähkanten und Stoffberechnung erscheinen nach der Konstruktion.</div>
  </div>
 
- <div class="section"><p class="hint" id="hoodSourceNote">Damenwerte teilweise öffentlich dokumentiert. Kein geprüftes Serien-Schnittsystem.</p></div>
+
+ <div class="top-seam-only" id="topSewingReport" aria-live="polite">
+  Die 3D-Schnittbaugruppe wird aus den tatsächlich berechneten Vorder-, Rücken- und Ärmelnähten erstellt.
+ </div>
+
 </div>
 
 <div class="pants-only pants-setup">
