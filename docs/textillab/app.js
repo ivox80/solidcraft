@@ -483,9 +483,12 @@ function showTopSeamReport(report,error=null){
    seam.lengthAMm.toFixed(1)+" / "+seam.lengthBMm.toFixed(1)+
    " mm · Differenz "+seam.deltaMm.toFixed(1)+" mm";
   const state=document.createElement("small");
-  state.textContent=seam.status==="OK"?"Längen passend":
-   seam.mode==="ease"?"Einhalteweite planen und prüfen":
-   seam.mode==="stretch"?"Ungenügende Kantenlänge – Materialdehnung prüfen":"Unpassende Nähkanten";
+  state.textContent=seam.status==="OK"?
+    (seam.id.startsWith("Stoffbruch")?"Stoffbruch – keine Nähnaht":"Längen passend"):
+   seam.status==="EINHALTEN_GEPLANT"?
+    "Geplant: "+seam.plannedEaseMm.toFixed(1)+" mm einhalten · Material und Knipse prüfen":
+   seam.mode==="ease"?"Einhalteweite muss konstruktiv korrigiert werden":
+   seam.mode==="stretch"?"Ungenügende Kantenlänge – Dehnung verifizieren":"Unpassende Nähkanten";
   line.append(heading,source,diff,state);el.append(line);
  }
  const result=document.createElement("p");result.className="hint";
@@ -548,6 +551,7 @@ function loadMannequinProfile(){
  const group=type==="hood"?$("hoodProfile").value:$("fitProfile").value;
  const sample=MANNEQUIN_DEFAULTS[group];
  if(!sample)return;
+ $("fitProfile").value=group;
  for(const [key,cm]of Object.entries(sample)){
   const id="fit"+key[0].toUpperCase()+key.slice(1);
   $(id).value=cm;
@@ -945,6 +949,11 @@ $("hoodVariant").addEventListener("change",()=>{
 });
 $("hoodProfile").addEventListener("change",loadMannequinProfile);
 $("fitProfile").addEventListener("change",()=>{
+ if($("templateType").value==="hood"){
+  $("hoodProfile").value=$("fitProfile").value;
+  $("hoodProfile").dispatchEvent(new Event("change",{bubbles:true}));
+  return;
+ }
  if($("templateType").value==="top")$("topAvatarLink").checked=false;
  loadMannequinProfile();
 });
