@@ -125,16 +125,24 @@ function panel(piece,name,kind,sign,m){
    const upperR=m.upperArm/(2*PI),wristR=m.wrist/(2*PI);
    const frac=clamp((y-100)/(m.sleeve-100),0,1);
    const radius=(upperR*(1-frac)+wristR*frac)+9;
+   // Sleeve underarm apex is level with the REAL bodice armscye base.
+   // It must NOT float 140 mm above the garment armhole as before.
+   const cap=piece.points.bicepY;
+   const worldY=y<=cap?215-200*y/cap:15-(y-cap)*.91;
    return pt(centerX+sign*radius*Math.sin(a),
-     245-y*.96,Math.cos(a)*radius);
+     worldY,Math.cos(a)*radius);
   }
   const widthRate=clamp(x/width,0,1),theta=front?
    widthRate*PI*.5:PI-widthRate*PI*.5;
   const radius=y<330?bust:y<490?
    bust+(waist-bust)*(y-330)/160:y<680?
    waist+(hip-waist)*(y-490)/190:hip;
+  // Near the upper shoulder front/back meet in the shoulder plane,
+  // not 15 cm apart across the chest. The volume grows towards the bust.
+  const shoulderDrop=clamp((y-piece.points.topY)/
+    (piece.points.armY-piece.points.topY),0,1);
   return pt(sign*Math.sin(theta)*(radius+10),260-y,
-    Math.cos(theta)*(radius+10)*.88);
+    Math.cos(theta)*(radius+10)*.88*shoulderDrop);
  });
  return {name,kind,sign,uv,xyz,faces:face,edges:edgeIds,
   edgeLength,source:piece};
@@ -338,6 +346,15 @@ function physics(sewn,mm,material){
   clearance=num("clearanceMm",p.clearance,2,35),
   iterations=Math.round(num("iterations",22,2,50));
  const blocked=new Set();
+ const owner=new Array(vertices.length).fill("front");
+ for(let i=0;i<sewn.groups.length;i++){
+   const original=sewn.groups[i][0];
+   let name="front";
+   for(const [panelName,offset]of sewn.offsets){
+     if(offset<=original)name=panelName;else break;
+   }
+   owner[i]=name.startsWith("sleeve")?name:"torso";
+ }
  // Keep only a few neckline anchors so gravity makes the rest fall.
  for(const p of sewn.edgeGroups){
   if(p.color!=="#eec78a")continue;
@@ -345,15 +362,29 @@ function physics(sewn,mm,material){
   for(let i=0;i<p.indices.length;i+=step)blocked.add(p.indices[i]);
  }
  const torso=(x,y,z)=>{
-  if(y<-580||y>215)return [x,y,z];
+  // The head/neck opening is free. A chest-radius collider must not inflate
+  // neck and shoulder sewing lines; only the chest and waist are constrained.
+  if(y<-580||y>55)return [x,y,z];
   const radius=y>0?mm.chest/(2*PI):
-   y> -240?mm.chest/(2*PI)+(mm.waist-mm.chest)/(2*PI)*(-y/240):
+   y>-240?mm.chest/(2*PI)+(mm.waist-mm.chest)/(2*PI)*(-y/240):
    mm.waist/(2*PI)+(mm.hip-mm.waist)/(2*PI)*clamp((-y-240)/280,0,1);
   const rx=radius+clearance,rz=radius*.83+clearance;
   const level=Math.hypot(x/rx,z/rz);
   if(level>=1)return [x,y,z];
   const ratio=1/Math.max(level,1e-7);
   return [x*ratio,y,z*ratio];
+ };
+ const sleeveCollision=(x,y,z,sign)=>{
+   if(y>210||y<-540)return [x,y,z];
+   const fraction=clamp((210-y)/550,0,1);
+   const centerX=sign*(mm.shoulder*.49+15+fraction*62);
+   const r=(mm.upperArm/(2*PI)*(1-fraction)+
+      mm.wrist/(2*PI)*fraction)+clearance;
+   const dx=x-centerX,dz=z,span=Math.hypot(dx,dz);
+   if(span>=r)return [x,y,z];
+   const angle=span>1e-6?1/span:0;
+   return [centerX+(angle?dx*angle*r:sign*r),y,
+     angle?dz*angle*r:0];
  };
  // Build multiple equal-area/edge springs from the flat panel distances.
  const work=sewn.springs;
@@ -385,7 +416,9 @@ function physics(sewn,mm,material){
    }
   }
   for(let j=0;j<vertices.length;j++)if(!blocked.has(j)){
-   const a=vertices[j],b=torso(...a);
+   const a=vertices[j],part=owner[j];
+   const b=part==="torso"?torso(...a):
+     sleeveCollision(...a,part.endsWith("R")?1:-1);
    if(a[0]!==b[0]||a[2]!==b[2]){
     a[0]=b[0];a[2]=b[2];contacts++;
    }
