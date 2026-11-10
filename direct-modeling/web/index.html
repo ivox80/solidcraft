@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SolidCraft – Rust/WASM Direct Modeling</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,Segoe UI,sans-serif;background:#11151c;color:#e7ebf1}
+*{box-sizing:border-box}body{margin:0}header{height:60px;background:#1b222c;border-bottom:1px solid #343e4a;padding:12px 20px;display:flex;align-items:center;justify-content:space-between}
+header b{font-size:19px}.shell{display:grid;grid-template-columns:270px minmax(0,1fr) 280px;height:calc(100vh - 60px)}aside{background:#1b222c;padding:16px;overflow:auto}aside:first-child{border-right:1px solid #343e4a}aside:last-child{border-left:1px solid #343e4a}
+h3{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:#a5bacd}button,select,input{background:#273442;border:1px solid #4a5b6e;color:white;border-radius:6px;padding:9px;min-width:0}button{cursor:pointer}button:hover{background:#35485c}button:disabled{opacity:.4;cursor:not-allowed}
+button.active{background:#316789}.stack{display:grid;gap:10px}.row{display:flex;gap:8px}.row>*{flex:1;min-width:0}label{display:grid;gap:5px;font-size:12px;color:#afc2d4}input{width:100%}
+#viewport{position:relative;min-height:250px;overflow:hidden}canvas{display:block}#hint{position:absolute;bottom:16px;left:16px;background:#111a24dd;padding:9px 12px;border-radius:6px;color:#b3c4d6;font-size:12px}
+.item{width:100%;text-align:left;margin-bottom:7px}.item.selected{outline:2px solid #3fbadf}.badge{display:inline-block;background:#354455;border-radius:4px;padding:4px 7px;font-size:12px}
+#status{font-size:12px;color:#a7d0ab}#log{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;color:#b4c7d9}
+@media(max-width:800px){.shell{grid-template-columns:1fr;grid-template-rows:auto 360px auto;height:auto}aside{border:0!important}}
+</style>
+<script type="importmap">{"imports":{"three":"https://esm.sh/three@0.170.0","three/addons/":"https://esm.sh/three@0.170.0/examples/jsm/"}}</script>
+</head>
+<body>
+<header><b>SolidCraft <span style="color:#46c9ed">Direct Modeling</span></b><div style="display:flex;gap:14px;align-items:center"><a href="./v03.html" style="color:#70d4f6;text-decoration:none;border:1px solid #438da7;padding:7px 10px;border-radius:6px">v0.3 öffnen</a><span id="status">Rust/WASM wird geladen …</span></div></header>
+<div class="shell">
+<aside class="stack">
+<div><h3>Baugruppen / Körper</h3><div id="objects"></div></div>
+<div><h3>Demo</h3><button id="reset">Demo zurücksetzen</button></div>
+<div><h3>Boolean</h3><label>Werkzeugkörper<select id="cutter"></select></label><div class="row"><button id="subtract">Abziehen (Rust)</button></div><small>Alle markierten Zielkörper werden mit dem ausgewählten Werkzeugkörper geschnitten.</small></div>
+<div><h3>Protokoll</h3><div id="log">Bereit.</div></div>
+</aside>
+<div id="viewport"><div id="hint">Drehen: links ziehen · Zoomen: Mausrad · Pan: rechts ziehen</div></div>
+<aside class="stack">
+<div><h3>Direkte Bearbeitung</h3><p class="badge" id="selected-label">Kein Körper</p></div>
+<label>Achse<select id="axis"><option value="0">X</option><option value="1">Y</option><option value="2">Z</option></select></label>
+<label>Fläche<select id="side"><option value="max">Positive Fläche (+)</option><option value="min">Negative Fläche (-)</option></select></label>
+<label>Verschiebung (mm)<input id="delta" type="number" step="1" value="5"></label>
+<button id="move">Fläche verschieben (Rust)</button>
+<p style="font-size:12px;color:#b8c8d7">Die Fläche wird durch den Rust-Kern verändert. Anschließend zeichnet Three.js das Ergebnis neu.</p>
+<button id="undo">Letzten Schritt rückgängig</button>
+</aside></div>
+<script type="module" src="./app.js"></script>
+</body></html>

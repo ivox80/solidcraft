@@ -1,0 +1,34 @@
+name: Direct Modeling WebAssembly
+on:
+  push:
+    paths:
+      - 'direct-modeling/**'
+      - '.github/workflows/direct-modeling-wasm.yml'
+  pull_request:
+    paths:
+      - 'direct-modeling/**'
+      - '.github/workflows/direct-modeling-wasm.yml'
+jobs:
+  wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: jetli/wasm-pack-action@v0.4.0
+      - name: Build browser WebAssembly package
+        run: wasm-pack build direct-modeling --target web --features wasm
+      - name: Check browser script syntax
+        run: |
+          node --check direct-modeling/web/app.js
+          node --check direct-modeling/web/v03.js
+          node --check direct-modeling/web/v04.js
+      - name: Upload distributable demo
+        uses: actions/upload-artifact@v4
+        with:
+          name: solidcraft-direct-modeling-browser
+          path: |
+            direct-modeling/web/
+            direct-modeling/pkg/
+          if-no-files-found: error
