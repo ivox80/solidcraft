@@ -174,12 +174,15 @@ function seamsFor(panels,fit){
   if(!ea||!eb||ea.length!==eb.length)throw Error("Nähkanten können nicht paarweise verknüpft werden: "+name);
   const la=pa.edgeLength[edgeA],lb=pb.edgeLength[edgeB],delta=la-lb;
   const tolerance=1.5;
+  const plannedEaseMm=kind==="cap"?
+    Number(fit.capBalance?.targetEaseMm??0)*(edgeA==="capFront"?.4:.6):0;
   const mode=kind==="cap"&&delta>tolerance?"ease":
     kind==="cap"&&delta< -tolerance?"stretch":"match";
   const status=mode==="match"?Math.abs(delta)<=tolerance?"OK":"MISMATCH":
-    mode==="ease"?"EINHALTEN_ERFORDERLICH":"DEHNEN_ERFORDERLICH";
+    mode==="ease"?(Math.abs(delta-plannedEaseMm)<=.6?
+      "EINHALTEN_GEPLANT":"EINHALTEN_ERFORDERLICH"):"DEHNEN_ERFORDERLICH";
   pairs.push({id:name,a,edgeA,b,edgeB,mode,status,deltaMm:delta,
-    lengthAMm:la,lengthBMm:lb,
+    lengthAMm:la,lengthBMm:lb,plannedEaseMm,
     plannedEaseTotalMm:fit.capBalance?.targetEaseMm??null,
     indexPairs:ea.map((v,i)=>[v,eb[reverse?eb.length-1-i:i]]),
     reverse});
@@ -187,12 +190,14 @@ function seamsFor(panels,fit){
  for(const side of ["R","L"]){
   pair("Schulternaht "+side,"front"+side,"shoulder","back"+side,"shoulder");
   pair("Seitennaht "+side,"front"+side,"side","back"+side,"side");
-  pair("Ärmel vorn "+side,"sleeve"+side,"capFront",
-    "front"+side,"armhole",true,"cap");
-  pair("Ärmel hinten "+side,"sleeve"+side,"capBack",
-    "back"+side,"armhole",false,"cap");
-  pair("Ärmel-Unterarm "+side,"sleeve"+side,"underBack",
-    "sleeve"+side,"underFront",true);
+  if(panels.some(p=>p.name==="sleeve"+side)){
+    pair("Ärmel vorn "+side,"sleeve"+side,"capFront",
+      "front"+side,"armhole",true,"cap");
+    pair("Ärmel hinten "+side,"sleeve"+side,"capBack",
+      "back"+side,"armhole",false,"cap");
+    pair("Ärmel-Unterarm "+side,"sleeve"+side,"underBack",
+      "sleeve"+side,"underFront",true);
+  }
  }
  pair("Stoffbruch vorne","frontR","fold","frontL","fold");
  pair("Stoffbruch hinten","backR","fold","backL","fold");
@@ -396,7 +401,10 @@ function physics(sewn,mm,material){
  return {vertices,rmsPct:rms*100,maxPct:max*100,contacts,color:p.color};
 }
 function construct(draft,body={},fabric={}){
- const pieces=draft?.construction?.pieces||draft?.pieces;
+ const allPieces=draft?.construction?.pieces||draft?.pieces;
+ const showSleeves=draft?.profile?.style?.sleeves!==false&&
+   draft?.parts?.some(p=>p.name?.includes("Ärmel"))!==false;
+ const pieces=showSleeves?allPieces:allPieces?.slice(0,2);
  if(!Array.isArray(pieces)||pieces.length<2)
   throw Error("2D-Grundschnitt für vernähte 3D-Ansicht fehlt.");
  const sourceMeasure=draft?.construction?.measurements||draft?.measurements||{};
@@ -410,11 +418,8 @@ function construct(draft,body={},fabric={}){
   if(pieces.length>=3)panels.push(panel(pieces[2],"sleeve"+side,"sleeve",sign,garmentMm));
  }
  const complete=pieces.length>=3;
- const contracts=complete?seamsFor(panels,draft):[];
- if(!complete){
-  // No invented upper sleeves, no pretend sewing if sleeve block is absent.
-  throw Error("Ärmelschnitt fehlt: die Oberteil-Nähbaugruppe ist unvollständig.");
- }
+ // A sleeveless shirt intentionally leaves its armscyes open; no artificial sleeves.
+ const contracts=seamsFor(panels,draft);
  const stitched=stitchPanels(panels,contracts);
  const relaxed=physics(stitched,bodyMm,fabric);
  const cloth={name:"Oberteil · vier Rumpf-Hälften + zwei Ärmel",
@@ -424,9 +429,9 @@ function construct(draft,body={},fabric={}){
  const metric={
   seamCount:contracts.length,
   seamPairs:contracts.map(({id,a,edgeA,b,edgeB,status,mode,deltaMm,
-     lengthAMm,lengthBMm,plannedEaseTotalMm})=>({
+     lengthAMm,lengthBMm,plannedEaseTotalMm,plannedEaseMm})=>({
      id,a,edgeA,b,edgeB,status,mode,deltaMm,lengthAMm,
-     lengthBMm,plannedEaseTotalMm,
+     lengthBMm,plannedEaseTotalMm,plannedEaseMm,
      connected:true
   })),
   sewnEdgePairs:contracts.length,
@@ -438,7 +443,8 @@ function construct(draft,body={},fabric={}){
   collisionCorrections:relaxed.contacts,
   seamFitVerified:unexpected.length===0,
   pendingProcessing:unexpected.length,
-  openEdges:["Halsausschnitt","Saum","Ärmelbündchen"],
+  openEdges:complete?["Halsausschnitt","Saum","Ärmelbündchen"]:
+    ["Halsausschnitt","Saum","offene Armlöcher (ärmellos)"],
   unclosedDarts:["Brust-/Schulterabnäher","Taillenabnäher"],
   approximation:true,
   validForProduction:false,
