@@ -146,8 +146,16 @@ function profile(values,options={}){
   upperArm:340,wrist:190,sleeve:620,ease:80})){
   const raw=Number(values?.[k]??fallback);
   if(!Number.isFinite(raw)||raw<=0||raw>3500)throw Error("Körpermaß "+k+" ungültig.");
-  mm[k]=raw;
+  const override=Number(options?.[k+"Mm"]??raw);
+  if(!Number.isFinite(override)||override<=0||override>3500)
+   throw Error("3D-Körpermaß "+k+" ungültig.");
+  mm[k]=override;
  }
+ if(options.neckMm!=null){
+  const n=Number(options.neckMm);
+  if(!Number.isFinite(n)||n<180||n>700)throw Error("3D-Halsumfang ungültig.");
+  mm.neck=n;
+ }else mm.neck=380;
  const rawHeight=Number(options.heightMm??1680);
  if(!Number.isFinite(rawHeight)||rawHeight<850||rawHeight>2400)
   throw Error("Körpergröße der Maßpuppe ist ungültig.");
@@ -391,13 +399,15 @@ function construct(draft,body={},fabric={}){
  const pieces=draft?.construction?.pieces||draft?.pieces;
  if(!Array.isArray(pieces)||pieces.length<2)
   throw Error("2D-Grundschnitt für vernähte 3D-Ansicht fehlt.");
- const bodyMm=profile(draft?.construction?.measurements||draft?.measurements||{},body);
+ const sourceMeasure=draft?.construction?.measurements||draft?.measurements||{};
+ const garmentMm=profile(sourceMeasure);
+ const bodyMm=profile(sourceMeasure,body);
  const panels=[];
  for(const side of ["R","L"]){
   const sign=side==="R"?1:-1;
-  panels.push(panel(pieces[0],"front"+side,"front",sign,bodyMm));
-  panels.push(panel(pieces[1],"back"+side,"back",sign,bodyMm));
-  if(pieces.length>=3)panels.push(panel(pieces[2],"sleeve"+side,"sleeve",sign,bodyMm));
+  panels.push(panel(pieces[0],"front"+side,"front",sign,garmentMm));
+  panels.push(panel(pieces[1],"back"+side,"back",sign,garmentMm));
+  if(pieces.length>=3)panels.push(panel(pieces[2],"sleeve"+side,"sleeve",sign,garmentMm));
  }
  const complete=pieces.length>=3;
  const contracts=complete?seamsFor(panels,draft):[];
