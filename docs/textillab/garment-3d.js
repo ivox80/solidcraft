@@ -175,7 +175,7 @@ function exportOBJ(meshes){
 function createRenderer(canvas){
  const ctx=canvas.getContext("2d");if(!ctx)throw Error("3D Canvas nicht verfügbar");
  const state={yaw:-.55,pitch:-.18,zoom:1,wire:false,body:true,fullBody:false,
-  meshes:[],drag:null,model:null,report:null,clothMaterial:null};
+  meshes:[],drag:null,panX:0,panY:0,model:null,report:null,clothMaterial:null};
  function rotate(pt){
   const cy=Math.cos(state.yaw),sy=Math.sin(state.yaw),
    cp=Math.cos(state.pitch),sp=Math.sin(state.pitch);
@@ -197,10 +197,16 @@ function createRenderer(canvas){
   const meshes=state.meshes.filter(m=>(!m.body||state.body)&&(!m.fullBodyOnly||state.fullBody));
   if(!meshes.length)return;
   const points=meshes.flatMap(m=>m.vertices.map(rotate));
-  const ext=Math.max(200,...points.map(p=>Math.abs(p[0])*2.4),...points.map(p=>Math.abs(p[1])*2.0));
-  const scale=Math.min(w,h)/(ext)*state.zoom*.86;
+  // Fit the currently visible geometry, never the model origin. A full-body
+  // mannequin and a hood can have very different absolute world positions.
+  const minX=Math.min(...points.map(p=>p[0])),maxX=Math.max(...points.map(p=>p[0]));
+  const minY=Math.min(...points.map(p=>p[1])),maxY=Math.max(...points.map(p=>p[1]));
+  const centerX=(minX+maxX)*.5,centerY=(minY+maxY)*.5;
+  const spanX=Math.max(100,maxX-minX),spanY=Math.max(100,maxY-minY);
+  const scale=Math.min(w*.84/spanX,h*.84/spanY)*state.zoom;
   const transformed=new Map(),all=[];
-  const project=p=>[w*.5+p[0]*scale,h*.55-p[1]*scale,p[2]];
+  const project=p=>[w*.5+state.panX+(p[0]-centerX)*scale,
+    h*.5+state.panY-(p[1]-centerY)*scale,p[2]];
   for(const mesh of meshes){
    const rotated=mesh.vertices.map(rotate);
    transformed.set(mesh,rotated.map(project));
@@ -249,20 +255,35 @@ function createRenderer(canvas){
   }
   ctx.fillStyle="#7a9cab";ctx.font="10px Segoe UI, Arial";ctx.fillText("Ziehen: drehen · Rad: zoomen",12,h-14);
  }
+ canvas.style.touchAction="none";
+ canvas.addEventListener("contextmenu",e=>e.preventDefault());
  canvas.addEventListener("pointerdown",e=>{
-  state.drag={x:e.clientX,y:e.clientY};
+  state.drag={x:e.clientX,y:e.clientY,
+    pan:e.button===1||e.button===2||e.shiftKey};
   canvas.setPointerCapture?.(e.pointerId);
  });
  canvas.addEventListener("pointermove",e=>{
   if(!state.drag)return;
-  state.yaw+= (e.clientX-state.drag.x)*.008;
-  state.pitch=clamp(state.pitch+(e.clientY-state.drag.y)*.006,-1.35,1.35);
-  state.drag={x:e.clientX,y:e.clientY};redraw();
+  const dx=e.clientX-state.drag.x,dy=e.clientY-state.drag.y;
+  if(state.drag.pan){state.panX+=dx;state.panY+=dy;}
+  else{
+   state.yaw+=dx*.008;
+   state.pitch=clamp(state.pitch+dy*.006,-1.35,1.35);
+  }
+  state.drag={...state.drag,x:e.clientX,y:e.clientY};redraw();
  });
  const end=()=>{state.drag=null};
  canvas.addEventListener("pointerup",end);canvas.addEventListener("pointercancel",end);
  canvas.addEventListener("wheel",e=>{
-  e.preventDefault();state.zoom=clamp(state.zoom*(e.deltaY<0?1.11:.9),.4,3);redraw();
+  e.preventDefault();
+  const r=canvas.getBoundingClientRect(),cx=e.clientX-r.left-r.width*.5,
+    cy=e.clientY-r.top-r.height*.5;
+  const old=state.zoom;
+  state.zoom=clamp(state.zoom*Math.exp(-e.deltaY*.0012),.15,12);
+  const ratio=state.zoom/old;
+  state.panX=cx-(cx-state.panX)*ratio;
+  state.panY=cy-(cy-state.panY)*ratio;
+  redraw();
  },{passive:false});
  return {setModel(type,data){
     state.model={type,data};
@@ -286,7 +307,7 @@ function createRenderer(canvas){
     if("fullBody"in options)state.fullBody=!!options.fullBody;
     redraw();
   },
-  reset(){state.yaw=-.55;state.pitch=-.18;state.zoom=1;redraw()},
+  reset(){state.yaw=-.55;state.pitch=-.18;state.zoom=1;state.panX=0;state.panY=0;redraw()},
   draw:redraw,obj(){return exportOBJ(state.meshes)},state};
 }
 const API={modelFor,createRenderer,exportOBJ};
