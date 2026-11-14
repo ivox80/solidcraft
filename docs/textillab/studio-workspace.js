@@ -122,23 +122,80 @@ function filterMeasures(){
  main.style.display=(template.value==="mesh"||template.value==="hood")?"none":"";
  main.open=true;
 }
+// The 2D drawing uses a world-space viewport so panning and zooming do not
+// fight the SVG rerender or the scrollable pattern inspector.
+let panX=0,panY=0,panDrag=null;
+function drawingBase(svg){
+ const values=(svg.dataset.baseViewBox||"").trim().split(/\\s+/).map(Number);
+ return values.length===4&&values.every(Number.isFinite)&&values[2]>0&&values[3]>0?values:null;
+}
 function refreshZoom(){
  const svg=preview.querySelector("svg");
  if(!svg)return;
- if(svg!==lastSvg){lastSvg=svg;svg.dataset.baseViewBox=svg.getAttribute("viewBox")||"";}
- const v=(svg.dataset.baseViewBox||"").trim().split(/\s+/).map(Number);
- if(v.length!==4||!v.every(Number.isFinite)||v[2]<=0||v[3]<=0)return;
- const [x,y,w,h]=v,nw=w/zoom,nh=h/zoom;
+ if(svg!==lastSvg){
+  lastSvg=svg;
+  svg.dataset.baseViewBox=svg.getAttribute("viewBox")||"";
+  svg.style.touchAction="none";
+ }
+ const base=drawingBase(svg);if(!base)return;
+ const [x,y,w,h]=base,nw=w/zoom,nh=h/zoom;
  svg.setAttribute("viewBox",[
-  x+(w-nw)/2,y+(h-nh)/2,nw,nh
- ].map(n=>Number(n.toFixed(3))).join(" "));
+  x+(w-nw)/2+panX,y+(h-nh)/2+panY,nw,nh
+ ].map(n=>Number(n.toFixed(5))).join(" "));
  $("zoomValue").textContent=Math.round(zoom*100)+"%";
- $("zoomFit").classList.toggle("is-active",zoom===1);
+ $("zoomFit").classList.toggle("is-active",zoom===1&&panX===0&&panY===0);
 }
-function setZoom(v){zoom=Math.max(.65,Math.min(2.5,Math.round(v*20)/20));refreshZoom()}
-$("zoomIn").addEventListener("click",()=>setZoom(zoom+.2));
-$("zoomOut").addEventListener("click",()=>setZoom(zoom-.2));
-$("zoomFit").addEventListener("click",()=>setZoom(1));
+function setZoom(v,clientX=null,clientY=null){
+ const old=zoom,next=Math.max(.2,Math.min(12,v));
+ const svg=preview.querySelector("svg"),base=svg&&drawingBase(svg);
+ if(base&&clientX!==null&&clientY!==null){
+  const r=svg.getBoundingClientRect();
+  if(r.width&&r.height){
+   const fx=Math.max(0,Math.min(1,(clientX-r.left)/r.width));
+   const fy=Math.max(0,Math.min(1,(clientY-r.top)/r.height));
+   panX+=(fx-.5)*base[2]*(1/old-1/next);
+   panY+=(fy-.5)*base[3]*(1/old-1/next);
+  }
+ }
+ zoom=next;refreshZoom();
+}
+function fitDrawing(){zoom=1;panX=0;panY=0;refreshZoom();}
+$("zoomIn").addEventListener("click",()=>setZoom(zoom*1.25));
+$("zoomOut").addEventListener("click",()=>setZoom(zoom/1.25));
+$("zoomFit").addEventListener("click",fitDrawing);
+preview.addEventListener("wheel",e=>{
+ if(!preview.querySelector("svg"))return;
+ e.preventDefault();
+ setZoom(zoom*Math.exp(-e.deltaY*.0013),e.clientX,e.clientY);
+},{passive:false});
+preview.addEventListener("pointerdown",e=>{
+ if(e.button!==1&&e.button!==2&&!e.shiftKey)return;
+ const svg=preview.querySelector("svg");if(!svg)return;
+ e.preventDefault();
+ panDrag={id:e.pointerId,x:e.clientX,y:e.clientY};
+ preview.setPointerCapture?.(e.pointerId);
+ preview.style.cursor="grabbing";
+});
+preview.addEventListener("pointermove",e=>{
+ if(!panDrag||panDrag.id!==e.pointerId)return;
+ const svg=preview.querySelector("svg"),base=svg&&drawingBase(svg);
+ if(!base)return;
+ const rect=svg.getBoundingClientRect();
+ if(rect.width&&rect.height){
+  panX-=(e.clientX-panDrag.x)*base[2]/zoom/rect.width;
+  panY-=(e.clientY-panDrag.y)*base[3]/zoom/rect.height;
+  refreshZoom();
+ }
+ panDrag.x=e.clientX;panDrag.y=e.clientY;
+});
+function endPan(e){
+ if(!panDrag||panDrag.id!==e.pointerId)return;
+ panDrag=null;preview.style.cursor="";
+ if(preview.hasPointerCapture?.(e.pointerId))preview.releasePointerCapture(e.pointerId);
+}
+preview.addEventListener("pointerup",endPan);
+preview.addEventListener("pointercancel",endPan);
+preview.addEventListener("contextmenu",e=>e.preventDefault());
 $("focusDrawing").addEventListener("click",()=>{
  const focus=document.body.classList.toggle("focus-pattern");
  $("focusDrawing").setAttribute("aria-pressed",String(focus));
@@ -149,7 +206,7 @@ $("focusDrawing").addEventListener("click",()=>{
 });
 new MutationObserver(changes=>{
  if(!changes.some(c=>c.type==="childList"))return;
- lastSvg=null;zoom=1;refreshZoom();
+ lastSvg=null;refreshZoom();
  if(selectedIndex>=0)selectPiece(selectedIndex);
 }).observe(preview,{childList:true});
 function setStep(id){
